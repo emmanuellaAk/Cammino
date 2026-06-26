@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProfile name="prod">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <!-- Structured one-line JSON for log aggregators in prod -->
+                <pattern>{"ts":"%d{yyyy-MM-ddTHH:mm:ss.SSSZ}","level":"%-5level","logger":"%logger{36}","msg":"%replace(%msg){'\"','\\\"'}","thread":"%thread"}%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <springProfile name="!prod">
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{36}) - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <logger name="com.careeros" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="org.springframework.security" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="org.flywaydb" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="org.hibernate.SQL" level="WARN" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+</configuration>

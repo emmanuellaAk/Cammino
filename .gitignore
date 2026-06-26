@@ -1,0 +1,80 @@
+# ─── Secrets & environment ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+secrets/
+
+# ─── OS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# ─── Claude Code project files ──────────────────────────────────────────────
+.claude/
+
+# ─── IDE & editors ──────────────────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+
+# ─── Java / Maven (backend/) ────────────────────────────────────────────────
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+!backend/src/**/*.jar
+
+# ─── Python / FastAPI (ai-service/) ─────────────────────────────────────────
+ai-service/__pycache__/
+ai-service/**/__pycache__/
+ai-service/.venv/
+ai-service/venv/
+ai-service/.env
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+
+# ─── Node / React frontend (frontend/) ──────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.cache/
+frontend/.env
+
+# ─── Chrome extension (browser-extension/) ──────────────────────────────────
+browser-extension/node_modules/
+browser-extension/dist/
+browser-extension/build/
+browser-extension/.env
+
+# ─── Logs ───────────────────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Uploads / local storage ────────────────────────────────────────────────
+uploads/
+resumes/
