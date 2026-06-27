@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
 
     // @SQLRestriction on Job filters deleted_at IS NULL automatically for all JPQL queries
     Optional<Job> findByIdAndUserId(UUID id, UUID userId);
+
+    List<Job> findAllByUserId(UUID userId);
 
     // Native query bypasses @SQLRestriction — needed for cleanup
     @Modifying

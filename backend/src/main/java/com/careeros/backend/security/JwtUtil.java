@@ -1,5 +1,6 @@
 package com.careeros.backend.security;
 
+import com.careeros.backend.exception.UnauthorizedException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -46,6 +47,29 @@ public class JwtUtil {
 
     public <T> T extractClaim(String token, Function<Claims, T> resolver) {
         return resolver.apply(extractAllClaims(token));
+    }
+
+    public String generateOAuthState(UUID userId) {
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claim("purpose", "oauth-state")
+                .id(UUID.randomUUID().toString())
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 5 * 60 * 1000L))
+                .signWith(signingKey(), Jwts.SIG.HS256)
+                .compact();
+    }
+
+    public UUID validateOAuthState(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            if (!"oauth-state".equals(claims.get("purpose"))) {
+                throw new UnauthorizedException("Invalid OAuth state");
+            }
+            return UUID.fromString(claims.getSubject());
+        } catch (JwtException e) {
+            throw new UnauthorizedException("OAuth state expired or invalid");
+        }
     }
 
     private boolean isTokenExpired(String token) {
