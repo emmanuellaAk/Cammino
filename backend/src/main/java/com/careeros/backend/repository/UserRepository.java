@@ -23,4 +23,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Modifying
     @Query("UPDATE User u SET u.failedLoginAttempts = 0, u.accountNonLocked = true, u.lockoutExpiresAt = null WHERE u.email = :email")
     void resetLockout(String email);
+
+    @Modifying
+    @Query("UPDATE User u SET u.accountNonLocked = false, u.lockoutExpiresAt = :expiresAt WHERE u.email = :email")
+    void lockAccount(String email, java.time.LocalDateTime expiresAt);
 }

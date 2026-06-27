@@ -59,6 +59,16 @@ public class User implements UserDetails {
 
     private LocalDateTime lockoutExpiresAt;
 
+    private String university;
+
+    @Enumerated(EnumType.STRING)
+    private CareerLevel careerLevel;
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    private String phone;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
