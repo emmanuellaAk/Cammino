@@ -39,8 +39,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    @Value("${server.ssl.enabled:false}")
-    private boolean sslEnabled;
+    @Value("${app.cookie.secure:false}")
+    private boolean secureCookie;
 
     // ─── Register ────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ public class AuthService {
         String token = createEmailVerificationToken(user);
         emailService.sendVerificationEmail(user.getEmail(), token);
 
-        log.info("New user registered: {}", user.getEmail());
+        log.info("New user registered: userId={}", user.getId());
         return ApiResponse.success("Account created. Please check your email to verify your account.", UserResponse.from(user));
     }
 
@@ -96,10 +96,10 @@ public class AuthService {
         long accessMaxAge = jwtProperties.getAccessTokenExpirationMs() / 1000;
         long refreshMaxAge = jwtProperties.getRefreshTokenExpirationMs() / 1000;
 
-        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getCookieName(), accessToken, accessMaxAge, sslEnabled).toString());
-        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getRefreshCookieName(), rawRefresh, refreshMaxAge, sslEnabled).toString());
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getCookieName(), accessToken, accessMaxAge, secureCookie).toString());
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getRefreshCookieName(), rawRefresh, refreshMaxAge, secureCookie).toString());
 
-        log.info("User logged in: {}", user.getEmail());
+        log.info("User logged in: userId={}", user.getId());
         return ApiResponse.success("Login successful", UserResponse.from(user));
     }
 
@@ -126,8 +126,8 @@ public class AuthService {
         long accessMaxAge = jwtProperties.getAccessTokenExpirationMs() / 1000;
         long refreshMaxAge = jwtProperties.getRefreshTokenExpirationMs() / 1000;
 
-        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getCookieName(), newAccess, accessMaxAge, sslEnabled).toString());
-        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getRefreshCookieName(), newRawRefresh, refreshMaxAge, sslEnabled).toString());
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getCookieName(), newAccess, accessMaxAge, secureCookie).toString());
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getRefreshCookieName(), newRawRefresh, refreshMaxAge, secureCookie).toString());
 
         return ApiResponse.success("Token refreshed");
     }
@@ -142,8 +142,8 @@ public class AuthService {
                     .ifPresent(refreshTokenRepository::delete);
         }
 
-        response.addHeader("Set-Cookie", CookieUtil.clear(jwtProperties.getCookieName(), sslEnabled).toString());
-        response.addHeader("Set-Cookie", CookieUtil.clear(jwtProperties.getRefreshCookieName(), sslEnabled).toString());
+        response.addHeader("Set-Cookie", CookieUtil.clear(jwtProperties.getCookieName(), secureCookie).toString());
+        response.addHeader("Set-Cookie", CookieUtil.clear(jwtProperties.getRefreshCookieName(), secureCookie).toString());
 
         return ApiResponse.success("Logged out successfully");
     }
@@ -165,7 +165,7 @@ public class AuthService {
         userRepository.save(user);
         emailVerificationTokenRepository.delete(evt);
 
-        log.info("Email verified for: {}", user.getEmail());
+        log.info("Email verified: userId={}", user.getId());
         return ApiResponse.success("Email verified successfully — you can now log in");
     }
 
@@ -231,7 +231,7 @@ public class AuthService {
         // Revoke all refresh tokens on password change
         refreshTokenRepository.deleteAllByUserId(user.getId());
 
-        log.info("Password reset for: {}", user.getEmail());
+        log.info("Password reset: userId={}", user.getId());
         return ApiResponse.success("Password reset successfully — please log in with your new password");
     }
 
@@ -278,17 +278,19 @@ public class AuthService {
         int attempts = user.getFailedLoginAttempts() + 1;
         if (attempts >= MAX_FAILED_ATTEMPTS) {
             userRepository.lockAccount(user.getEmail(), LocalDateTime.now().plusMinutes(LOCKOUT_MINUTES));
-            log.warn("Account locked after {} failed attempts: {}", attempts, user.getEmail());
+            log.warn("Account locked after {} failed attempts: userId={}", attempts, user.getId());
         }
     }
 
     private void validatePasswordStrength(String password) {
-        boolean hasUpper = password.chars().anyMatch(Character::isUpperCase);
-        boolean hasLower = password.chars().anyMatch(Character::isLowerCase);
-        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasUpper   = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLower   = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasDigit   = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecial = password.chars().anyMatch(c -> !Character.isLetterOrDigit(c));
 
-        if (!hasUpper || !hasLower || !hasDigit) {
-            throw new BadRequestException("Password must contain at least one uppercase letter, one lowercase letter, and one number");
+        if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+            throw new BadRequestException(
+                    "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character");
         }
     }
 }

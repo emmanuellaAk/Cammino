@@ -62,8 +62,7 @@ public class GmailService {
     private final JwtUtil                    jwtUtil;
     private final GoogleOAuthProperties      googleProps;
     private final NotificationService        notificationService;
-
-    private final RestClient restClient = RestClient.create();
+    private final RestClient                 gmailRestClient;
 
     // ─── OAuth Flow ──────────────────────────────────────────────────────────
 
@@ -128,8 +127,11 @@ public class GmailService {
 
         try {
             String refreshToken = encryptionUtil.decrypt(connection.getRefreshTokenEnc());
-            restClient.post()
-                    .uri(OAUTH_REVOKE + "?token=" + refreshToken)
+            String revokeUri = UriComponentsBuilder.fromUriString(OAUTH_REVOKE)
+                    .queryParam("token", refreshToken)
+                    .toUriString();
+            gmailRestClient.post()
+                    .uri(revokeUri)
                     .retrieve()
                     .toBodilessEntity();
         } catch (Exception e) {
@@ -250,7 +252,7 @@ public class GmailService {
         body.add("redirect_uri",  googleProps.redirectUri());
         body.add("grant_type",    "authorization_code");
 
-        return restClient.post()
+        return gmailRestClient.post()
                 .uri(OAUTH_TOKEN)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .body(body)
@@ -265,7 +267,7 @@ public class GmailService {
         body.add("client_secret", googleProps.clientSecret());
         body.add("grant_type",    "refresh_token");
 
-        return restClient.post()
+        return gmailRestClient.post()
                 .uri(OAUTH_TOKEN)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .body(body)
@@ -274,7 +276,7 @@ public class GmailService {
     }
 
     private String fetchGmailAddress(String accessToken) {
-        GmailProfile profile = restClient.get()
+        GmailProfile profile = gmailRestClient.get()
                 .uri(GMAIL_API + "/profile")
                 .header("Authorization", "Bearer " + accessToken)
                 .retrieve()
@@ -287,7 +289,7 @@ public class GmailService {
                 "OR subject:rejected OR subject:unfortunately OR subject:\"next steps\" " +
                 "OR subject:\"moving forward\" OR subject:\"position\") newer_than:30d";
 
-        GmailMessageListResponse listResponse = restClient.get()
+        GmailMessageListResponse listResponse = gmailRestClient.get()
                 .uri(GMAIL_API + "/messages?q={q}&maxResults={max}",
                         Map.of("q", query, "max", MAX_MESSAGES))
                 .header("Authorization", "Bearer " + accessToken)
@@ -299,7 +301,7 @@ public class GmailService {
         List<ParsedEmail> results = new ArrayList<>();
         for (GmailMessageListResponse.MessageRef ref : listResponse.messages()) {
             try {
-                GmailMessageDetail detail = restClient.get()
+                GmailMessageDetail detail = gmailRestClient.get()
                         .uri(GMAIL_API + "/messages/{id}?format=metadata&metadataHeaders=From,Subject,Date",
                                 Map.of("id", ref.id()))
                         .header("Authorization", "Bearer " + accessToken)

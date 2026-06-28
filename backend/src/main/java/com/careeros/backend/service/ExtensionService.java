@@ -4,6 +4,7 @@ import com.careeros.backend.dto.request.GenerateExtensionTokenRequest;
 import com.careeros.backend.dto.request.QuickSaveJobRequest;
 import com.careeros.backend.dto.response.*;
 import com.careeros.backend.entity.*;
+import com.careeros.backend.exception.BadRequestException;
 import com.careeros.backend.exception.ResourceNotFoundException;
 import com.careeros.backend.repository.*;
 import com.careeros.backend.util.SecurityUtil;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.security.SecureRandom;
 import java.util.*;
 
@@ -63,10 +65,9 @@ public class ExtensionService {
     @Transactional
     public ApiResponse<Void> revokeToken(UUID tokenId) {
         UUID userId = SecurityUtil.getCurrentUser().getId();
-        if (!extensionTokenRepository.existsById(tokenId)) {
-            throw new ResourceNotFoundException("Extension token", tokenId);
-        }
-        extensionTokenRepository.deleteByIdAndUserId(tokenId, userId);
+        ExtensionToken token = extensionTokenRepository.findByIdAndUserId(tokenId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Extension token", tokenId));
+        extensionTokenRepository.delete(token);
         log.info("Extension token {} revoked by user {}", tokenId, userId);
         return ApiResponse.success("Extension token revoked");
     }
@@ -78,6 +79,7 @@ public class ExtensionService {
         User user = SecurityUtil.getCurrentUser();
 
         if (request.jobUrl() != null && !request.jobUrl().isBlank()) {
+            validateUrlScheme(request.jobUrl());
             Optional<Job> existing = jobRepository.findByJobUrlAndUserId(request.jobUrl(), user.getId());
             if (existing.isPresent()) {
                 return ApiResponse.success("Job already in your tracker", JobResponse.from(existing.get()));
@@ -103,6 +105,7 @@ public class ExtensionService {
     @Transactional(readOnly = true)
     public ApiResponse<Map<String, Object>> checkUrl(String url) {
         UUID userId = SecurityUtil.getCurrentUser().getId();
+        validateUrlScheme(url);
         return jobRepository.findByJobUrlAndUserId(url, userId)
                 .<ApiResponse<Map<String, Object>>>map(job -> ApiResponse.success(Map.of(
                         "exists", true,
@@ -117,6 +120,17 @@ public class ExtensionService {
         return ApiResponse.success(
                 jobRepository.findTop10ByUserIdOrderByCreatedAtDesc(userId)
                         .stream().map(JobResponse::from).toList());
+    }
+
+    private void validateUrlScheme(String url) {
+        try {
+            String scheme = URI.create(url).getScheme();
+            if (!"http".equals(scheme) && !"https".equals(scheme)) {
+                throw new BadRequestException("Job URL must use http or https");
+            }
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Invalid job URL");
+        }
     }
 
     @Transactional(readOnly = true)

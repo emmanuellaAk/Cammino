@@ -33,4 +33,12 @@ public class RestClientConfig {
 
         return builder.build();
     }
+
+    @Bean
+    RestClient gmailRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofSeconds(15));
+        return RestClient.builder().requestFactory(factory).build();
+    }
 }

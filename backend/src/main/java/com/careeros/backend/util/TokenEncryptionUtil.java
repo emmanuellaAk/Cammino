@@ -22,6 +22,10 @@ public class TokenEncryptionUtil {
 
     public TokenEncryptionUtil(@Value("${app.security.token-encryption-key}") String base64Key) {
         byte[] keyBytes = Base64.getDecoder().decode(base64Key);
+        if (keyBytes.length != 32) {
+            throw new IllegalStateException(
+                    "TOKEN_ENCRYPTION_KEY must decode to exactly 32 bytes (AES-256), got " + keyBytes.length);
+        }
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }
 

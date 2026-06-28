@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -25,6 +27,9 @@ import java.util.UUID;
 @Tag(name = "Job Tracker")
 @SecurityRequirement(name = "bearerAuth")
 public class JobController {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of("createdAt", "updatedAt", "company", "jobTitle", "deadline", "appliedAt", "status");
 
     private final JobService jobService;
 
@@ -45,6 +50,9 @@ public class JobController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
         Sort sort = sortDir.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();

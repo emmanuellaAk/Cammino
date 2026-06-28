@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -17,14 +18,17 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     @Modifying
+    @Transactional
     @Query("UPDATE User u SET u.failedLoginAttempts = u.failedLoginAttempts + 1 WHERE u.email = :email")
     void incrementFailedAttempts(String email);
 
     @Modifying
+    @Transactional
     @Query("UPDATE User u SET u.failedLoginAttempts = 0, u.accountNonLocked = true, u.lockoutExpiresAt = null WHERE u.email = :email")
     void resetLockout(String email);
 
     @Modifying
+    @Transactional
     @Query("UPDATE User u SET u.accountNonLocked = false, u.lockoutExpiresAt = :expiresAt WHERE u.email = :email")
     void lockAccount(String email, java.time.LocalDateTime expiresAt);
 }

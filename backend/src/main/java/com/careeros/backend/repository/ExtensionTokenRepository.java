@@ -16,5 +16,7 @@ public interface ExtensionTokenRepository extends JpaRepository<ExtensionToken, 
 
     List<ExtensionToken> findAllByUserId(UUID userId);
 
+    Optional<ExtensionToken> findByIdAndUserId(UUID id, UUID userId);
+
     void deleteByIdAndUserId(UUID id, UUID userId);
 }

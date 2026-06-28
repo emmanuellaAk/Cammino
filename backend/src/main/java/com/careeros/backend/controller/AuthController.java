@@ -11,9 +11,12 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -21,6 +24,7 @@ import java.util.Arrays;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Authentication")
 public class AuthController {
 
@@ -64,7 +68,8 @@ public class AuthController {
 
     @PostMapping("/resend-verification")
     @Operation(summary = "Resend email verification link")
-    ResponseEntity<ApiResponse<Void>> resendVerification(@RequestParam String email) {
+    ResponseEntity<ApiResponse<Void>> resendVerification(
+            @RequestParam @Email @Size(max = 255) String email) {
         return ResponseEntity.ok(authService.resendVerification(email));
     }
 

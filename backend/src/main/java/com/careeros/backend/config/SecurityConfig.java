@@ -3,6 +3,7 @@ package com.careeros.backend.config;
 import com.careeros.backend.security.ExtensionTokenAuthFilter;
 import com.careeros.backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,12 +29,15 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter   jwtAuthFilter;
     private final ExtensionTokenAuthFilter  extensionTokenAuthFilter;
 
+    @Value("${app.swagger.enabled:false}")
+    private boolean swaggerEnabled;
+
     // Spring Boot auto-detects the UserDetailsService + PasswordEncoder beans
     // and wires them into a DaoAuthenticationProvider — no explicit bean needed.
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> {})
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -44,22 +48,26 @@ public class SecurityConfig {
                                 ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .frameOptions(frame -> frame.deny())
                         .xssProtection(xss -> xss.disable())
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31_536_000))
+                        .contentTypeOptions(cto -> {})
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/email/connect/google/callback",
-                                "/api/docs/**",
-                                "/api/swagger-ui/**",
-                                "/api/swagger-ui.html",
-                                "/actuator/health"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/api/auth/**").permitAll();
+                    auth.requestMatchers("/api/email/connect/google/callback").permitAll();
+                    auth.requestMatchers("/actuator/health").permitAll();
+                    auth.requestMatchers("/actuator/**").authenticated();
+                    if (swaggerEnabled) {
+                        auth.requestMatchers("/api/docs/**", "/api/swagger-ui/**", "/api/swagger-ui.html").permitAll();
+                    }
+                    auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();
+                    auth.anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(extensionTokenAuthFilter, JwtAuthenticationFilter.class)
-                .build();
+                .addFilterAfter(extensionTokenAuthFilter, JwtAuthenticationFilter.class);
+
+        return http.build();
     }
 
     @Bean
