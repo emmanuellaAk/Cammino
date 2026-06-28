@@ -35,6 +35,7 @@ public class AiService {
     private final JobRepository jobRepository;
     private final JobMatchRepository jobMatchRepository;
     private final FileStorageService fileStorageService;
+    private final NotificationService notificationService;
 
     // ─── Resume Analysis ─────────────────────────────────────────────────────
 
@@ -62,6 +63,11 @@ public class AiService {
             analysisRepository.save(analysis);
 
             log.info("Resume analysis completed for user {}", user.getId());
+            notificationService.createNotification(
+                    user, NotificationType.AI_ANALYSIS_READY,
+                    "Resume analysis complete",
+                    "Your resume has been analysed. Check your skills, strengths, and experience summary.",
+                    null);
             return ApiResponse.success("Resume analysed successfully", ResumeAnalysisResponse.from(analysis));
 
         } catch (ServiceUnavailableException e) {

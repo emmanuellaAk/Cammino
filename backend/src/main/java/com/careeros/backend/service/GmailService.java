@@ -61,6 +61,7 @@ public class GmailService {
     private final TokenEncryptionUtil        encryptionUtil;
     private final JwtUtil                    jwtUtil;
     private final GoogleOAuthProperties      googleProps;
+    private final NotificationService        notificationService;
 
     private final RestClient restClient = RestClient.create();
 
@@ -221,6 +222,14 @@ public class GmailService {
                 result.setStatusApplied(true);
                 log.info("Auto-applied status {} to job {} based on email '{}'",
                         inferredStatus, matchedJob.getId(), email.subject());
+                notificationService.createNotification(
+                        connection.getUser(),
+                        com.careeros.backend.entity.NotificationType.STATUS_CHANGE,
+                        "Status updated: " + matchedJob.getJobTitle(),
+                        "Your application at " + matchedJob.getCompany()
+                                + " was automatically updated to " + inferredStatus.name()
+                                + " based on a recent email.",
+                        matchedJob.getId());
             }
 
             saved.add(scanResultRepository.save(result));

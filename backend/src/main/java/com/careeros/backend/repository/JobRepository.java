@@ -6,7 +6,12 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import com.careeros.backend.entity.ApplicationStatus;
+import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,6 +22,21 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     Optional<Job> findByIdAndUserId(UUID id, UUID userId);
 
     List<Job> findAllByUserId(UUID userId);
+
+    @Query("SELECT j FROM Job j WHERE j.user.id = :userId " +
+           "AND j.deadline IS NOT NULL " +
+           "AND j.deadline BETWEEN :from AND :to " +
+           "AND j.status NOT IN :excluded")
+    List<Job> findJobsWithDeadlineBetween(@Param("userId") UUID userId,
+                                          @Param("from")   LocalDate from,
+                                          @Param("to")     LocalDate to,
+                                          @Param("excluded") Collection<ApplicationStatus> excluded);
+
+    @Query("SELECT j FROM Job j WHERE j.user.id = :userId " +
+           "AND j.status = com.careeros.backend.entity.ApplicationStatus.APPLIED " +
+           "AND j.appliedAt IS NOT NULL AND j.appliedAt < :cutoff")
+    List<Job> findStaleAppliedJobs(@Param("userId") UUID userId,
+                                   @Param("cutoff") LocalDate cutoff);
 
     // Native query bypasses @SQLRestriction — needed for cleanup
     @Modifying
