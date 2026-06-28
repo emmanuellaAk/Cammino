@@ -1,5 +1,6 @@
 package com.careeros.backend.config;
 
+import com.careeros.backend.security.ExtensionTokenAuthFilter;
 import com.careeros.backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,7 +25,8 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter   jwtAuthFilter;
+    private final ExtensionTokenAuthFilter  extensionTokenAuthFilter;
 
     // Spring Boot auto-detects the UserDetailsService + PasswordEncoder beans
     // and wires them into a DaoAuthenticationProvider — no explicit bean needed.
@@ -56,6 +58,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(extensionTokenAuthFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 

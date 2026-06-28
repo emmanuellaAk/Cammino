@@ -23,6 +23,13 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
 
     List<Job> findAllByUserId(UUID userId);
 
+    Optional<Job> findByJobUrlAndUserId(String jobUrl, UUID userId);
+
+    List<Job> findTop10ByUserIdOrderByCreatedAtDesc(UUID userId);
+
+    @Query("SELECT j.status, COUNT(j) FROM Job j WHERE j.user.id = :userId GROUP BY j.status")
+    List<Object[]> countByStatus(@Param("userId") UUID userId);
+
     @Query("SELECT j FROM Job j WHERE j.user.id = :userId " +
            "AND j.deadline IS NOT NULL " +
            "AND j.deadline BETWEEN :from AND :to " +
