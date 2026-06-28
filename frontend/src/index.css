@@ -1,0 +1,102 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+@theme inline {
+  --font-sans: 'Inter', 'SF Pro Text', -apple-system, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-brand: var(--accent-brand);
+}
+
+/* ── CareerOS design tokens (matches CareerOS.dc.html exactly) ─────────────── */
+:root {
+  --bg:        #f5f5f7;
+  --surface:   #ffffff;
+  --surface-2: #fafafc;
+  --panel:     #f0f0f3;
+  --text:      #1d1d1f;
+  --text-2:    rgba(0,0,0,0.56);
+  --text-3:    rgba(0,0,0,0.40);
+  --border:    rgba(0,0,0,0.09);
+  --border-2:  rgba(0,0,0,0.05);
+  --sidebar:   #fbfbfd;
+  --track:     rgba(0,0,0,0.08);
+  --accent-brand: #12936a;
+  --shadow:    0 1px 2px rgba(0,0,0,.05), 0 10px 26px rgba(0,0,0,.05);
+  --ease:      cubic-bezier(0.4,0,0.2,1);
+  --radius:    0.625rem;
+
+  /* shadcn compat */
+  --background:         var(--bg);
+  --foreground:         var(--text);
+  --primary:            var(--accent-brand);
+  --primary-foreground: #ffffff;
+  --muted:              var(--surface-2);
+  --muted-foreground:   var(--text-2);
+  --input:              var(--surface-2);
+  --ring:               var(--accent-brand);
+}
+
+[data-theme="dark"] {
+  --bg:        #000000;
+  --surface:   #1a1a1c;
+  --surface-2: #242426;
+  --panel:     #161618;
+  --text:      #f5f5f7;
+  --text-2:    rgba(255,255,255,0.62);
+  --text-3:    rgba(255,255,255,0.42);
+  --border:    rgba(255,255,255,0.10);
+  --border-2:  rgba(255,255,255,0.06);
+  --sidebar:   #161617;
+  --track:     rgba(255,255,255,0.13);
+  --shadow:    0 1px 2px rgba(0,0,0,.5), 0 12px 34px rgba(0,0,0,.55);
+
+  --background:       var(--bg);
+  --foreground:       var(--text);
+  --muted:            var(--surface-2);
+  --muted-foreground: var(--text-2);
+  --input:            var(--surface-2);
+}
+
+/* ── Base resets ─────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+  body {
+    font-family: 'Inter', 'SF Pro Text', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--track);
+    border-radius: 980px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+/* ── Utility ──────────────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-fade-up { animation: fadeUp 0.2s var(--ease) forwards; }
