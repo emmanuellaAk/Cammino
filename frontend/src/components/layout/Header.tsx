@@ -22,7 +22,7 @@ export default function Header() {
   const isJobDetail = location.pathname.startsWith('/tracker/') && location.pathname !== '/tracker'
   const [title, sub] = isJobDetail
     ? ['Match analysis', 'AI-powered job fit breakdown']
-    : PAGE_META[path] ?? ['CareerOS', '']
+    : PAGE_META[path] ?? ['Cammino', '']
 
   return (
     <header

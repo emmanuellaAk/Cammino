@@ -16,7 +16,7 @@
   --color-accent-brand: var(--accent-brand);
 }
 
-/* ── CareerOS design tokens (matches CareerOS.dc.html exactly) ─────────────── */
+/* ── Cammino design tokens ─────────────────────────────────────────────────── */
 :root {
   --bg:        #f5f5f7;
   --surface:   #ffffff;

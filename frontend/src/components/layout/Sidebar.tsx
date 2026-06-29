@@ -45,7 +45,7 @@ export default function Sidebar() {
         >
           <Target size={18} />
         </div>
-        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em' }}>CareerOS</span>
+        <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em' }}>Cammino</span>
       </div>
 
       {/* Section label */}

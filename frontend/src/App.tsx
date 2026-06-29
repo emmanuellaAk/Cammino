@@ -39,7 +39,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   useEffect(() => {
-    document.title = 'CareerOS'
+    document.title = 'Cammino'
   }, [])
 
   return (
