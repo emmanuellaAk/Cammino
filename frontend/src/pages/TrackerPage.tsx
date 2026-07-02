@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, MoreHorizontal, Calendar, X } from 'lucide-react'
 import { jobsApi, type CreateJobRequest } from '@/api/jobs'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
+import { MOCK_JOBS } from '@/lib/mock-jobs'
 import type { ApplicationStatus, Job } from '@/types'
 
 const COLUMNS: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
@@ -319,11 +320,17 @@ export default function TrackerPage() {
 
   const { data: res, isLoading } = useQuery({
     queryKey: ['jobs', 'board'],
-    queryFn: () => jobsApi.list({ size: 200, sortBy: 'updatedAt', sortDir: 'desc' }),
+    queryFn: async () => {
+      try {
+        return await jobsApi.list({ size: 200, sortBy: 'updatedAt', sortDir: 'desc' })
+      } catch {
+        return null
+      }
+    },
     staleTime: 30_000,
   })
 
-  const jobs = res?.data?.data?.content ?? []
+  const jobs = res?.data?.data?.content ?? MOCK_JOBS
   const board = groupByStatus(jobs)
 
   const moveJob = useMutation({

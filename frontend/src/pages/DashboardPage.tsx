@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsApi } from '@/api/analytics'
 import { jobsApi } from '@/api/jobs'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
-import type { ApplicationStatus } from '@/types'
+import { MOCK_JOBS } from '@/lib/mock-jobs'
+import type { ApplicationStatus, AnalyticsOverview } from '@/types'
 
 const PIPELINE_STATUSES: ApplicationStatus[] = [
   'SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED',
@@ -111,32 +112,45 @@ function Empty({ text }: { text: string }) {
 export default function DashboardPage() {
   const { data: overviewRes, isLoading: loadingOverview } = useQuery({
     queryKey: ['analytics', 'overview'],
-    queryFn: () => analyticsApi.overview(),
+    queryFn: async () => { try { return await analyticsApi.overview() } catch { return null } },
     staleTime: 60_000,
   })
 
   const { data: trendRes, isLoading: loadingTrend } = useQuery({
     queryKey: ['analytics', 'trend', 'weekly'],
-    queryFn: () => analyticsApi.trend('weekly'),
+    queryFn: async () => { try { return await analyticsApi.trend('weekly') } catch { return null } },
     staleTime: 60_000,
   })
 
   const { data: recentRes, isLoading: loadingRecent } = useQuery({
     queryKey: ['jobs', 'recent-dashboard'],
-    queryFn: () => jobsApi.list({ size: 6, sortBy: 'updatedAt', sortDir: 'desc' }),
+    queryFn: async () => { try { return await jobsApi.list({ size: 6, sortBy: 'updatedAt', sortDir: 'desc' }) } catch { return null } },
     staleTime: 30_000,
   })
 
   const { data: deadlinesRes } = useQuery({
     queryKey: ['jobs', 'deadlines-dashboard'],
-    queryFn: () => jobsApi.list({ size: 6, sortBy: 'deadline', sortDir: 'asc' }),
+    queryFn: async () => { try { return await jobsApi.list({ size: 6, sortBy: 'deadline', sortDir: 'asc' }) } catch { return null } },
     staleTime: 60_000,
   })
 
-  const ov = overviewRes?.data?.data
-  const trend = trendRes?.data?.data ?? []
-  const recent = recentRes?.data?.data?.content ?? []
-  const deadlines = (deadlinesRes?.data?.data?.content ?? []).filter((j) => !!j.deadline)
+  // Fall back to mock data when backend is not available
+  const mockSorted = [...MOCK_JOBS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  const mockOverview: AnalyticsOverview = {
+    total: MOCK_JOBS.length, saved: 2, applied: 3, assessment: 2, interview: 2, offer: 1, rejected: 2,
+    active: 7, responseRate: 58, interviewRate: 25, offerRate: 8, avgDaysToResponse: 12,
+  }
+
+  const ov = overviewRes?.data?.data ?? mockOverview
+  const trend = trendRes?.data?.data ?? [
+    { period: 'Jun 2', periodStart: '', count: 1 },
+    { period: 'Jun 9', periodStart: '', count: 3 },
+    { period: 'Jun 16', periodStart: '', count: 2 },
+    { period: 'Jun 23', periodStart: '', count: 4 },
+    { period: 'Jun 30', periodStart: '', count: 2 },
+  ]
+  const recent = recentRes?.data?.data?.content ?? mockSorted.slice(0, 6)
+  const deadlines = (deadlinesRes?.data?.data?.content ?? MOCK_JOBS.filter((j) => j.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!))).filter((j) => !!j.deadline).slice(0, 6)
 
   const maxTrend = Math.max(...trend.map((t) => t.count), 1)
 
