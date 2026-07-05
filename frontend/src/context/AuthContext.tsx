@@ -5,6 +5,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import { authApi } from '@/api/auth'
 import type { User } from '@/types'
 
 interface AuthContextValue {
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null)
+    authApi.logout().catch(() => {})
   }, [])
 
   return (
