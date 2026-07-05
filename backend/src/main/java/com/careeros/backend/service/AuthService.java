@@ -42,10 +42,13 @@ public class AuthService {
     @Value("${app.cookie.secure:false}")
     private boolean secureCookie;
 
+    @Value("${app.auth.require-email-verification:true}")
+    private boolean requireEmailVerification;
+
     // ─── Register ────────────────────────────────────────────────────────────
 
     @Transactional
-    public ApiResponse<UserResponse> register(RegisterRequest request) {
+    public ApiResponse<UserResponse> register(RegisterRequest request, HttpServletResponse response) {
         if (userRepository.existsByEmail(request.getEmail().toLowerCase())) {
             throw new ConflictException("An account with this email already exists");
         }
@@ -57,15 +60,28 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName().trim())
                 .lastName(request.getLastName().trim())
+                .emailVerified(!requireEmailVerification)
                 .build();
 
         userRepository.save(user);
 
-        String token = createEmailVerificationToken(user);
-        emailService.sendVerificationEmail(user.getEmail(), token);
+        if (requireEmailVerification) {
+            String token = createEmailVerificationToken(user);
+            emailService.sendVerificationEmail(user.getEmail(), token);
+            log.info("New user registered (verification required): userId={}", user.getId());
+            return ApiResponse.success("Account created. Please check your email to verify your account.", null);
+        }
 
-        log.info("New user registered: userId={}", user.getId());
-        return ApiResponse.success("Account created. Please check your email to verify your account.", UserResponse.from(user));
+        // Dev mode: auto-verified — issue JWT cookies immediately
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String rawRefresh = createRefreshToken(user);
+        long accessMaxAge = jwtProperties.getAccessTokenExpirationMs() / 1000;
+        long refreshMaxAge = jwtProperties.getRefreshTokenExpirationMs() / 1000;
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getCookieName(), accessToken, accessMaxAge, secureCookie).toString());
+        response.addHeader("Set-Cookie", CookieUtil.create(jwtProperties.getRefreshCookieName(), rawRefresh, refreshMaxAge, secureCookie).toString());
+
+        log.info("New user registered (auto-verified): userId={}", user.getId());
+        return ApiResponse.success("Account created.", UserResponse.from(user));
     }
 
     // ─── Login ───────────────────────────────────────────────────────────────
@@ -75,7 +91,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail().toLowerCase())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
-        if (!user.isEmailVerified()) {
+        if (requireEmailVerification && !user.isEmailVerified()) {
             throw new UnauthorizedException("Please verify your email address before logging in");
         }
 
