@@ -40,13 +40,8 @@ export default function RegisterPage() {
       firstName: form.firstName,
       lastName: form.lastName,
     }),
-    onSuccess: (res) => {
-      if (res.data.data) {
-        setUser(res.data.data)
-        navigate('/dashboard', { replace: true })
-      } else {
-        setDone(true)
-      }
+    onSuccess: () => {
+      setDone(true)
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.error?.message ?? err?.response?.data?.message
