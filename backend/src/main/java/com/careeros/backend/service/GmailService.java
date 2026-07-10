@@ -106,7 +106,7 @@ public class GmailService {
         connectionRepository.save(connection);
 
         log.info("Gmail connected for user {}: {}", userId, gmailAddress);
-        return googleProps.frontendUrl() + "/settings?gmail=connected";
+        return googleProps.frontendUrl() + "/inbox?gmail=connected";
     }
 
     // ─── Connection Status ───────────────────────────────────────────────────
