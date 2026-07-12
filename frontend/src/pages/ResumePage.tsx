@@ -178,7 +178,7 @@ export default function ResumePage() {
 
   const { data: analysisRes } = useQuery({
     queryKey: ['resume-analysis', activeId],
-    queryFn: async () => { try { return await resumeApi.getAnalysis(activeId!) } catch { return null } },
+    queryFn: async () => { try { return await resumeApi.getAnalysis() } catch { return null } },
     enabled: !!activeId,
     staleTime: 300_000,
   })
@@ -236,7 +236,7 @@ export default function ResumePage() {
     if (!activeId) return
     setAnalyzing(true)
     try {
-      await resumeApi.analyze(activeId)
+      await resumeApi.analyze()
       queryClient.invalidateQueries({ queryKey: ['resume-analysis', activeId] })
     } catch {
       // mock: just show existing analysis

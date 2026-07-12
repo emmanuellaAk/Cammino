@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { Target, Check } from 'lucide-react'
 import { authApi } from '@/api/auth'
-import { useAuth } from '@/context/AuthContext'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 14px 'Inter'", color: 'var(--text)',
@@ -23,8 +22,6 @@ function passwordStrength(pw: string) {
 }
 
 export default function RegisterPage() {
-  const navigate = useNavigate()
-  const { setUser } = useAuth()
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)

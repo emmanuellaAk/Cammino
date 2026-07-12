@@ -9,6 +9,7 @@ const PAGE_META: Record<string, [string, string]> = {
   '/inbox':      ['Inbox',           'Job emails detected and auto-sorted from your connected inbox.'],
   '/resume':     ['Resume',          'AI breakdown of your resume, skills, and how to improve.'],
   '/analytics':  ['Analytics',       'Insights into how your job search is performing.'],
+  '/notifications': ['Notifications', 'Reminders, alerts, and updates about your applications.'],
   '/profile':    ['Profile',         'Your details, preferences, and connected services.'],
 }
 

@@ -14,19 +14,19 @@ export const resumeApi = {
   },
 
   setActive: (id: string) =>
-    api.patch<ApiResponse<Resume>>(`/api/resumes/${id}/activate`),
+    api.put<ApiResponse<Resume>>(`/api/resumes/${id}/set-active`),
 
   delete: (id: string) =>
     api.delete<ApiResponse<void>>(`/api/resumes/${id}`),
 
-  analyze: (id: string) =>
-    api.post<ApiResponse<ResumeAnalysis>>(`/api/ai/resume/${id}/analyze`),
+  analyze: () =>
+    api.post<ApiResponse<ResumeAnalysis>>('/api/ai/resume/analyze'),
 
-  getAnalysis: (id: string) =>
-    api.get<ApiResponse<ResumeAnalysis>>(`/api/ai/resume/${id}/analysis`),
+  getAnalysis: () =>
+    api.get<ApiResponse<ResumeAnalysis>>('/api/ai/resume/analysis'),
 
-  matchJob: (jobId: string, resumeId: string) =>
-    api.post<ApiResponse<JobMatch>>(`/api/ai/jobs/${jobId}/match`, { resumeId }),
+  matchJob: (jobId: string) =>
+    api.post<ApiResponse<JobMatch>>(`/api/ai/jobs/${jobId}/match`),
 
   getJobMatch: (jobId: string) =>
     api.get<ApiResponse<JobMatch>>(`/api/ai/jobs/${jobId}/match`),

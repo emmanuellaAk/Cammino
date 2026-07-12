@@ -211,17 +211,29 @@ export default function JobDetailPage() {
     enabled: !!id,
   })
 
-  const { data: matchRes } = useQuery({
+  const { data: matchRes, isLoading: matchLoading } = useQuery({
     queryKey: ['job', id, 'match'],
     queryFn: async () => { try { return await resumeApi.getJobMatch(id!) } catch { return null } },
     enabled: !!id,
   })
 
   const mockJob = MOCK_JOBS.find((j) => j.id === id)
+  const usingMockJob = !jobRes?.data?.data
   const job = jobRes?.data?.data ?? mockJob
   const notes = notesRes?.data?.data ?? localNotes
-  const matchData = matchRes?.data?.data ?? { ...(MOCK_MATCHES[id ?? ''] ?? FALLBACK_MATCH), id: 'mock', jobId: id ?? '', resumeId: 'mock' }
+  // Real jobs only show real AI match data (or an empty "run it" prompt) — the
+  // canned per-job mock only applies in fully-offline demo mode (no backend at all).
+  const matchData = matchRes?.data?.data
+    ?? (usingMockJob ? { ...(MOCK_MATCHES[id ?? ''] ?? FALLBACK_MATCH), id: 'mock', jobId: id ?? '', resumeId: 'mock' } : null)
   const status = localStatus ?? job?.status ?? 'SAVED'
+
+  const runMatch = useMutation({
+    mutationFn: () => resumeApi.matchJob(id!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['job', id, 'match'] }),
+  })
+
+  const matchErrorMessage = (runMatch.error as { response?: { data?: { message?: string } } } | null)
+    ?.response?.data?.message ?? 'Something went wrong — please try again.'
 
   const updateStatus = useMutation({
     mutationFn: (s: ApplicationStatus) => jobsApi.updateStatus(id!, s),
@@ -373,51 +385,99 @@ export default function JobDetailPage() {
 
         {/* Left: AI match ─────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Card title="AI match analysis">
-            <ScoreCircle score={matchData.matchScore} />
+          <Card
+            title="AI match analysis"
+            action={matchData && !usingMockJob ? (
+              <button
+                onClick={() => runMatch.mutate()}
+                disabled={runMatch.isPending}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: '5px 11px', borderRadius: 980,
+                  background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  color: 'var(--text-2)', cursor: runMatch.isPending ? 'default' : 'pointer',
+                  opacity: runMatch.isPending ? 0.6 : 1,
+                }}
+              >
+                {runMatch.isPending ? 'Analysing…' : 'Re-run'}
+              </button>
+            ) : undefined}
+          >
+            {matchLoading ? (
+              <div className="animate-pulse" style={{ height: 200, borderRadius: 10, background: 'var(--panel)' }} />
+            ) : matchData ? (
+              <>
+                <ScoreCircle score={matchData.matchScore} />
 
-            {matchData.summary && (
-              <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '16px 0 0' }}>
-                {matchData.summary}
-              </p>
-            )}
+                {matchData.summary && (
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: '16px 0 0' }}>
+                    {matchData.summary}
+                  </p>
+                )}
 
-            {/* Matching skills */}
-            <div style={{ marginTop: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                Matching skills
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {matchData.matchingSkills.map((s) => <Chip key={s} label={s} type="match" />)}
-              </div>
-            </div>
-
-            {/* Missing skills */}
-            {matchData.missingSkills.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-                  Gaps to address
+                {/* Matching skills */}
+                <div style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    Matching skills
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {matchData.matchingSkills.map((s) => <Chip key={s} label={s} type="match" />)}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {matchData.missingSkills.map((s) => <Chip key={s} label={s} type="miss" />)}
-                </div>
-              </div>
-            )}
 
-            {/* Recommendations */}
-            {matchData.recommendations.length > 0 && (
-              <div style={{ marginTop: 20, padding: '14px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-                  Recommendations
+                {/* Missing skills */}
+                {matchData.missingSkills.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                      Gaps to address
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {matchData.missingSkills.map((s) => <Chip key={s} label={s} type="miss" />)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {matchData.recommendations.length > 0 && (
+                  <div style={{ marginTop: 20, padding: '14px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                      Recommendations
+                    </div>
+                    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {matchData.recommendations.map((r, i) => (
+                        <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                          <span style={{ color: 'var(--accent-brand)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>→</span>
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+                <Zap size={22} style={{ color: 'var(--text-3)', margin: '0 auto 12px' }} />
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>No match analysis yet</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 16 }}>
+                  Run AI matching to score your active resume against this job's requirements.
                 </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {matchData.recommendations.map((r, i) => (
-                    <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                      <span style={{ color: 'var(--accent-brand)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>→</span>
-                      {r}
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  onClick={() => runMatch.mutate()}
+                  disabled={runMatch.isPending}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7,
+                    padding: '9px 18px', borderRadius: 980, fontSize: 13, fontWeight: 600,
+                    background: 'var(--accent-brand)', color: '#fff', border: 'none',
+                    cursor: runMatch.isPending ? 'default' : 'pointer', opacity: runMatch.isPending ? 0.75 : 1,
+                  }}
+                >
+                  <Zap size={14} />
+                  {runMatch.isPending ? 'Analysing…' : 'Run AI match'}
+                </button>
+                {runMatch.isError && (
+                  <div style={{ fontSize: 12, color: '#e5484d', marginTop: 12, lineHeight: 1.5 }}>
+                    {matchErrorMessage}
+                  </div>
+                )}
               </div>
             )}
           </Card>

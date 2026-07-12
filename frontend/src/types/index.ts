@@ -1,4 +1,6 @@
 // ─── Auth ─────────────────────────────────────────────────────────────────────
+export type CareerLevel = 'STUDENT' | 'NSS_APPLICANT' | 'GRADUATE' | 'PROFESSIONAL'
+
 export interface User {
   id: string
   email: string
@@ -6,8 +8,8 @@ export interface User {
   lastName: string
   phone?: string
   university?: string
-  careerLevel?: string
-  location?: string
+  careerLevel?: CareerLevel
+  bio?: string
   emailVerified: boolean
   createdAt: string
 }
@@ -104,21 +106,30 @@ export interface EmailScanResult {
 
 // ─── Notifications ────────────────────────────────────────────────────────────
 export type NotificationType =
-  | 'AI_ANALYSIS_READY'
-  | 'STATUS_CHANGE'
   | 'DEADLINE_REMINDER'
   | 'FOLLOW_UP_REMINDER'
-  | 'NEW_JOB_MATCH'
-  | 'GENERAL'
+  | 'STATUS_CHANGE'
+  | 'AI_ANALYSIS_READY'
+  | 'SYSTEM'
 
 export interface Notification {
   id: string
   type: NotificationType
   title: string
   message: string
+  relatedJobId?: string
   read: boolean
-  jobId?: string
+  readAt?: string
   createdAt: string
+}
+
+export interface NotificationPreference {
+  deadlineRemindersEnabled: boolean
+  deadlineReminderDaysBefore: number
+  followUpRemindersEnabled: boolean
+  followUpReminderDaysAfterApply: number
+  statusChangeAlertsEnabled: boolean
+  aiAnalysisAlertsEnabled: boolean
 }
 
 // ─── Analytics ────────────────────────────────────────────────────────────────

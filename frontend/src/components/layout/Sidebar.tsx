@@ -1,25 +1,36 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutGrid, Columns2, Target, Inbox,
-  FileText, BarChart2, User, ChevronRight,
+  FileText, BarChart2, Bell, User, ChevronRight,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { cn, initials } from '@/lib/utils'
+import { notificationsApi } from '@/api/notifications'
 
 const NAV = [
-  { to: '/dashboard',  label: 'Overview',       Icon: LayoutGrid },
-  { to: '/tracker',    label: 'Job tracker',     Icon: Columns2 },
-  { to: '/tracker/match', label: 'Match analysis', Icon: Target },
-  { to: '/inbox',      label: 'Inbox',           Icon: Inbox,    badge: 3 },
-  { to: '/resume',     label: 'Resume',          Icon: FileText },
-  { to: '/analytics',  label: 'Analytics',       Icon: BarChart2 },
-  { to: '/profile',    label: 'Profile',         Icon: User },
+  { to: '/dashboard',      label: 'Overview',       Icon: LayoutGrid },
+  { to: '/tracker',        label: 'Job tracker',     Icon: Columns2 },
+  { to: '/inbox',          label: 'Inbox',           Icon: Inbox,    badge: 3 },
+  { to: '/resume',         label: 'Resume',          Icon: FileText },
+  { to: '/analytics',      label: 'Analytics',       Icon: BarChart2 },
+  { to: '/notifications',  label: 'Notifications',   Icon: Bell },
+  { to: '/profile',        label: 'Profile',         Icon: User },
 ]
 
 export default function Sidebar() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const accent = 'var(--accent-brand)'
+
+  const { data: unreadRes } = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: () => notificationsApi.unreadCount(),
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  })
+  const unreadCount = unreadRes?.data?.data ?? 0
 
   const userName = user ? `${user.firstName} ${user.lastName}` : 'Amara Okafor'
   const userLevel = user?.careerLevel ?? 'Final-year student'
@@ -59,7 +70,9 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-col" style={{ gap: 2 }}>
-        {NAV.map(({ to, label, Icon, badge }) => (
+        {NAV.map(({ to, label, Icon, badge: staticBadge }) => {
+          const badge = to === '/notifications' ? (unreadCount > 0 ? unreadCount : undefined) : staticBadge
+          return (
           <NavLink
             key={to}
             to={to}
@@ -94,7 +107,8 @@ export default function Sidebar() {
               </span>
             )}
           </NavLink>
-        ))}
+          )
+        })}
       </nav>
 
       {/* User */}

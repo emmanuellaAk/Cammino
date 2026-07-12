@@ -10,6 +10,7 @@ import JobDetailPage from '@/pages/JobDetailPage'
 import ResumePage from '@/pages/ResumePage'
 import InboxPage from '@/pages/InboxPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
+import NotificationsPage from '@/pages/NotificationsPage'
 import ProfilePage from '@/pages/ProfilePage'
 import LoginPage from '@/pages/LoginPage'
 import RegisterPage from '@/pages/RegisterPage'
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="resume" element={<ResumePage />} />
           <Route path="inbox" element={<InboxPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

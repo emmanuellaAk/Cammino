@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, MoreHorizontal, Calendar, X } from 'lucide-react'
 import { jobsApi, type CreateJobRequest } from '@/api/jobs'
-import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
+import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import { MOCK_JOBS } from '@/lib/mock-jobs'
 import type { ApplicationStatus, Job } from '@/types'
 
