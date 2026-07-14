@@ -137,7 +137,7 @@ export default function DashboardPage() {
   // Fall back to mock data when backend is not available
   const mockSorted = [...MOCK_JOBS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const mockOverview: AnalyticsOverview = {
-    total: MOCK_JOBS.length, saved: 2, applied: 3, assessment: 2, interview: 2, offer: 1, rejected: 2,
+    total: MOCK_JOBS.length, saved: 2, applied: 3, inAssessment: 2, inInterview: 2, offers: 1, rejected: 2,
     active: 7, responseRate: 58, interviewRate: 25, offerRate: 8, avgDaysToResponse: 12,
   }
 
@@ -157,9 +157,9 @@ export default function DashboardPage() {
   const pipelineCount: Record<ApplicationStatus, number> = {
     SAVED:      ov?.saved      ?? 0,
     APPLIED:    ov?.applied    ?? 0,
-    ASSESSMENT: ov?.assessment ?? 0,
-    INTERVIEW:  ov?.interview  ?? 0,
-    OFFER:      ov?.offer      ?? 0,
+    ASSESSMENT: ov?.inAssessment ?? 0,
+    INTERVIEW:  ov?.inInterview  ?? 0,
+    OFFER:      ov?.offers       ?? 0,
     REJECTED:   ov?.rejected   ?? 0,
   }
   const maxPipeline = Math.max(...Object.values(pipelineCount), 1)
@@ -186,7 +186,7 @@ export default function DashboardPage() {
           loading={loadingOverview}
           label="Response rate"
           value={ov ? `${ov.responseRate}%` : '—'}
-          sub={`${ov?.interview ?? 0} reached interview`}
+          sub={`${ov?.inInterview ?? 0} reached interview`}
         />
         <StatCard
           loading={loadingOverview}

@@ -138,15 +138,27 @@ export interface AnalyticsOverview {
   active: number
   saved: number
   applied: number
-  assessment: number
-  interview: number
-  offer: number
+  inAssessment: number
+  inInterview: number
+  offers: number
   rejected: number
   responseRate: number
   interviewRate: number
   offerRate: number
   avgDaysToResponse?: number
   topSource?: string
+}
+
+export interface Funnel {
+  saved: number
+  submitted: number
+  inAssessment: number
+  inInterview: number
+  offers: number
+  rejected: number
+  assessmentRate: number
+  interviewRate: number
+  offerRate: number
 }
 
 export interface ApplicationTrend {
