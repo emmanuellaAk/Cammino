@@ -1,13 +1,16 @@
 import { useState, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, Briefcase } from 'lucide-react'
+import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, Briefcase, Sparkles, Plus } from 'lucide-react'
 import { resumeApi } from '@/api/resume'
+import { resumeDraftsApi } from '@/api/resumeDrafts'
+import { timeAgo } from '@/lib/utils'
 import type { Resume, ResumeAnalysis } from '@/types'
 
 // ── Mock data (fully-offline demo mode only — used when the backend itself is unreachable) ──
 const MOCK_RESUMES: Resume[] = [
   {
-    id: 'r-1', filename: 'Amara_Okafor_CV_2026.pdf',
+    id: 'r-1', originalFileName: 'Amara_Okafor_CV_2026.pdf',
     fileSize: 127_488, active: true, uploadedAt: '2026-06-15T09:00:00Z',
   },
 ]
@@ -118,7 +121,7 @@ function ResumeRow({ resume, onActivate, onDelete }: {
       <FileText size={18} style={{ color: resume.active ? 'var(--accent-brand)' : 'var(--text-3)', flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {resume.filename}
+          {resume.originalFileName}
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{fmtSize(resume.fileSize)}</div>
       </div>
@@ -155,8 +158,25 @@ function ResumeRow({ resume, onActivate, onDelete }: {
 // ── Resume page ───────────────────────────────────────────────────────────────
 export default function ResumePage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [localResumes, setLocalResumes] = useState<Resume[]>(MOCK_RESUMES)
   const [analyzing, setAnalyzing] = useState(false)
+
+  const { data: draftsRes } = useQuery({
+    queryKey: ['resume-drafts'],
+    queryFn: async () => { try { return await resumeDraftsApi.list() } catch { return null } },
+    staleTime: 30_000,
+  })
+  const drafts = draftsRes?.data?.data ?? []
+
+  const createDraft = useMutation({
+    mutationFn: (title: string) => resumeDraftsApi.create(title),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['resume-drafts'] })
+      const id = res.data.data?.id
+      if (id) navigate(`/resume/builder/${id}`)
+    },
+  })
 
   const { data: resumesRes } = useQuery({
     queryKey: ['resumes'],
@@ -197,7 +217,7 @@ export default function ResumePage() {
     } else {
       const mock: Resume = {
         id: `r-local-${Date.now()}`,
-        filename: file.name,
+        originalFileName: file.name,
         fileSize: file.size,
         active: localResumes.length === 0,
         uploadedAt: new Date().toISOString(),
@@ -343,6 +363,46 @@ export default function ResumePage() {
               }
             </button>
           )}
+
+          {/* Resume builder */}
+          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px 18px 14px', boxShadow: 'var(--shadow)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
+              <Sparkles size={14} style={{ color: 'var(--accent-brand)' }} />
+              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>Resume builder</span>
+            </div>
+
+            {drafts.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {drafts.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => navigate(`/resume/builder/${d.id}`)}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+                      padding: '9px 11px', borderRadius: 9, background: 'var(--surface-2)',
+                      border: '1px solid var(--border)', cursor: 'pointer', textAlign: 'left', width: '100%',
+                    }}
+                  >
+                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{d.title}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Edited {timeAgo(d.updatedAt)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => createDraft.mutate(`Resume ${drafts.length + 1}`)}
+              disabled={createDraft.isPending}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%',
+                fontSize: 12.5, fontWeight: 600, padding: '9px', borderRadius: 9,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                color: 'var(--text-2)', cursor: createDraft.isPending ? 'default' : 'pointer',
+              }}
+            >
+              <Plus size={13} /> {createDraft.isPending ? 'Creating…' : 'New resume'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

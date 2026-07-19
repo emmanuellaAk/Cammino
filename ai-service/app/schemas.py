@@ -33,6 +33,22 @@ class JobMatchResponse(BaseModel):
     summary: str
 
 
+class ChatHistoryEntry(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ResumeEditRequest(BaseModel):
+    mdx_content: str
+    instruction: str
+    chat_history: list[ChatHistoryEntry] = []
+
+
+class ResumeEditResponse(BaseModel):
+    reply: str
+    updated_mdx_content: str
+
+
 # ── JSON Schemas passed to Ollama's structured-output ("format") param ────────
 # These constrain generation directly — the model cannot produce a shape other
 # than this, so we don't need to defensively re-validate model output by hand.
@@ -59,4 +75,13 @@ JOB_MATCH_SCHEMA = {
         "summary": {"type": "string"},
     },
     "required": ["match_score", "matching_skills", "missing_skills", "recommendations", "summary"],
+}
+
+RESUME_EDIT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reply": {"type": "string"},
+        "updated_mdx_content": {"type": "string"},
+    },
+    "required": ["reply", "updated_mdx_content"],
 }

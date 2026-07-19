@@ -2,6 +2,8 @@ package com.careeros.backend.service;
 
 import com.careeros.backend.dto.ai.AiJobMatchRequest;
 import com.careeros.backend.dto.ai.AiJobMatchResponse;
+import com.careeros.backend.dto.ai.AiResumeEditRequest;
+import com.careeros.backend.dto.ai.AiResumeEditResponse;
 import com.careeros.backend.dto.ai.AiResumeRequest;
 import com.careeros.backend.dto.ai.AiResumeResponse;
 import com.careeros.backend.exception.ServiceUnavailableException;
@@ -48,6 +50,22 @@ public class AiServiceClient {
     @SuppressWarnings("unused")
     private AiJobMatchResponse jobMatchFallback(AiJobMatchRequest request, Throwable t) {
         log.warn("AI service unavailable for job matching: {}", t.getMessage());
+        throw new ServiceUnavailableException("AI service is temporarily unavailable. Please try again later.");
+    }
+
+    @Retry(name = "ai-service")
+    @CircuitBreaker(name = "ai-service", fallbackMethod = "resumeEditFallback")
+    public AiResumeEditResponse editResume(AiResumeEditRequest request) {
+        return aiRestClient.post()
+                .uri("/resume/edit")
+                .body(request)
+                .retrieve()
+                .body(AiResumeEditResponse.class);
+    }
+
+    @SuppressWarnings("unused")
+    private AiResumeEditResponse resumeEditFallback(AiResumeEditRequest request, Throwable t) {
+        log.warn("AI service unavailable for resume editing: {}", t.getMessage());
         throw new ServiceUnavailableException("AI service is temporarily unavailable. Please try again later.");
     }
 }

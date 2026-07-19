@@ -9,7 +9,7 @@ from app.config import settings
 logger = logging.getLogger("ai-service.ollama")
 
 
-async def generate_structured(prompt: str, schema: dict) -> dict:
+async def generate_structured(prompt: str, schema: dict, num_predict: int | None = None, timeout_seconds: float | None = None) -> dict:
     """Call the local Ollama server and force output matching `schema` via
     Ollama's structured-output support (constrained generation — the model
     literally cannot emit invalid JSON here, unlike a plain "please return JSON"
@@ -20,13 +20,13 @@ async def generate_structured(prompt: str, schema: dict) -> dict:
         "format": schema,
         "stream": False,
         "options": {
-            "num_predict": settings.ollama_num_predict,
+            "num_predict": num_predict or settings.ollama_num_predict,
             "temperature": 0.2,  # low temperature — this is extraction, not creative writing
         },
     }
 
     try:
-        async with httpx.AsyncClient(timeout=settings.ollama_timeout_seconds) as client:
+        async with httpx.AsyncClient(timeout=timeout_seconds or settings.ollama_timeout_seconds) as client:
             res = await client.post(f"{settings.ollama_base_url}/api/generate", json=payload)
     except httpx.ConnectError as e:
         logger.error("Could not reach Ollama at %s: %s", settings.ollama_base_url, e)

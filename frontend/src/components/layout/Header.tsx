@@ -21,8 +21,11 @@ export default function Header() {
 
   const path = '/' + location.pathname.split('/')[1]
   const isJobDetail = location.pathname.startsWith('/tracker/') && location.pathname !== '/tracker'
+  const isResumeBuilder = location.pathname.startsWith('/resume/builder/')
   const [title, sub] = isJobDetail
     ? ['Match analysis', 'AI-powered job fit breakdown']
+    : isResumeBuilder
+    ? ['Resume builder', 'Edit your resume live, or ask the AI to do it for you']
     : PAGE_META[path] ?? ['Cammino', '']
 
   return (

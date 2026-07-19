@@ -8,6 +8,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import TrackerPage from '@/pages/TrackerPage'
 import JobDetailPage from '@/pages/JobDetailPage'
 import ResumePage from '@/pages/ResumePage'
+import ResumeBuilderPage from '@/pages/ResumeBuilderPage'
 import InboxPage from '@/pages/InboxPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import NotificationsPage from '@/pages/NotificationsPage'
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="tracker" element={<TrackerPage />} />
           <Route path="tracker/:id" element={<JobDetailPage />} />
           <Route path="resume" element={<ResumePage />} />
+          <Route path="resume/builder/:id" element={<ResumeBuilderPage />} />
           <Route path="inbox" element={<InboxPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />

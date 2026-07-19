@@ -50,10 +50,32 @@ export interface ApplicationNote {
 // ─── Resume ───────────────────────────────────────────────────────────────────
 export interface Resume {
   id: string
-  filename: string
+  originalFileName: string
   fileSize: number
   active: boolean
   uploadedAt: string
+}
+
+export interface ResumeDraft {
+  id: string
+  title: string
+  mdxContent: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type ChatRole = 'USER' | 'ASSISTANT'
+
+export interface ResumeDraftMessage {
+  id: string
+  role: ChatRole
+  content: string
+  createdAt: string
+}
+
+export interface ResumeDraftChatResult {
+  assistantMessage: ResumeDraftMessage
+  draft: ResumeDraft
 }
 
 export interface ResumeAnalysis {
