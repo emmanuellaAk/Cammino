@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw } from 'lucide-react'
+import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, Briefcase } from 'lucide-react'
 import { resumeApi } from '@/api/resume'
 import type { Resume, ResumeAnalysis } from '@/types'
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+// ── Mock data (fully-offline demo mode only — used when the backend itself is unreachable) ──
 const MOCK_RESUMES: Resume[] = [
   {
     id: 'r-1', filename: 'Amara_Okafor_CV_2026.pdf',
@@ -13,22 +13,18 @@ const MOCK_RESUMES: Resume[] = [
 ]
 
 const MOCK_ANALYSIS: ResumeAnalysis = {
-  id: 'a-1', resumeId: 'r-1', overallScore: 78,
-  summary: 'Strong foundation with relevant technical experience. Your resume clearly demonstrates backend engineering skills and academic rigour. Quantifying impact and tightening keyword alignment would meaningfully boost application success across your target roles.',
+  id: 'a-1', resumeId: 'r-1',
+  summary: 'Strong foundation with relevant technical experience. Your resume clearly demonstrates backend engineering skills and academic rigour, with concrete examples backed by numbers.',
   skills: ['Java', 'Spring Boot', 'Python', 'TypeScript', 'React', 'PostgreSQL', 'REST APIs', 'Git', 'Docker', 'AWS'],
+  experienceYears: 3,
+  education: 'BSc Computer Science, University of Ghana',
   strengths: [
     'Concise, well-structured project descriptions',
     'Strong academic background with relevant coursework clearly listed',
     'Good breadth of technical skills across frontend and backend',
     'Internship experience scoped and quantified with tech stack',
   ],
-  improvements: [
-    'Quantify impact — add numbers to project outcomes (users, latency improvements, scale)',
-    'Align keywords more closely with job descriptions in your target sector',
-    'Add a two-line professional summary at the top to set context fast',
-    'Expand personal projects or open-source contributions to show initiative',
-  ],
-  analysisDate: '2026-06-15T09:30:00Z',
+  analyzedAt: '2026-06-15T09:30:00Z',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -38,38 +34,32 @@ function fmtSize(bytes: number) {
     : `${Math.round(bytes / 1024)} KB`
 }
 
-// ── Score ring ────────────────────────────────────────────────────────────────
-function ScoreRing({ score }: { score: number }) {
-  const r = 52
-  const circ = 2 * Math.PI * r
-  const fill = (score / 100) * circ
-  const color = score >= 80 ? '#12936a' : score >= 65 ? '#c98a00' : '#8a8a8e'
-  const label = score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : 'Needs work'
-
+// ── Analysis header ───────────────────────────────────────────────────────────
+function AnalysisHeader({ experienceYears, education }: { experienceYears?: number; education?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
-      <svg width={120} height={120} viewBox="0 0 120 120">
-        <circle cx={60} cy={60} r={r} fill="none" stroke="var(--panel)" strokeWidth={9} />
-        <circle
-          cx={60} cy={60} r={r} fill="none"
-          stroke={color} strokeWidth={9}
-          strokeDasharray={`${fill} ${circ}`}
-          strokeLinecap="round"
-          transform="rotate(-90 60 60)"
-          style={{ transition: 'stroke-dasharray 0.7s cubic-bezier(0.4,0,0.2,1)' }}
-        />
-        <text x={60} y={64} textAnchor="middle" style={{ fontSize: 26, fontWeight: 700, fill: color, fontFamily: 'Inter' }}>
-          {score}
-        </text>
-      </svg>
-      <div>
-        <div style={{ fontSize: 22, fontWeight: 700, color, letterSpacing: '-0.03em' }}>{label}</div>
-        <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>Overall resume score</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 10 }}>
-          <Zap size={13} style={{ color: 'var(--accent-brand)' }} />
-          <span style={{ fontSize: 12, color: 'var(--accent-brand)', fontWeight: 500 }}>AI analysis</span>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <Zap size={13} style={{ color: 'var(--accent-brand)' }} />
+        <span style={{ fontSize: 12, color: 'var(--accent-brand)', fontWeight: 600 }}>AI analysis</span>
       </div>
+      {experienceYears != null && (
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500,
+          color: 'var(--text-2)', background: 'var(--surface-2)', border: '1px solid var(--border)',
+          borderRadius: 980, padding: '4px 10px',
+        }}>
+          <Briefcase size={12} /> {experienceYears} {experienceYears === 1 ? 'year' : 'years'} experience
+        </span>
+      )}
+      {education && (
+        <span style={{
+          display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500,
+          color: 'var(--text-2)', background: 'var(--surface-2)', border: '1px solid var(--border)',
+          borderRadius: 980, padding: '4px 10px',
+        }}>
+          <GraduationCap size={12} /> {education}
+        </span>
+      )}
     </div>
   )
 }
@@ -259,8 +249,8 @@ export default function ResumePage() {
                 border: '1px solid var(--border)', padding: '24px 24px 20px',
                 boxShadow: 'var(--shadow)',
               }}>
-                <ScoreRing score={analysis.overallScore} />
-                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, margin: '18px 0 0' }}>
+                <AnalysisHeader experienceYears={analysis.experienceYears} education={analysis.education} />
+                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, margin: '16px 0 0' }}>
                   {analysis.summary}
                 </p>
               </div>
@@ -281,33 +271,17 @@ export default function ResumePage() {
                 </div>
               </div>
 
-              {/* Strengths + improvements */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {/* Strengths */}
-                <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Strengths</div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {analysis.strengths.map((s, i) => (
-                      <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                        <span style={{ color: '#12936a', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Improvements */}
-                <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>To improve</div>
-                  <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {analysis.improvements.map((s, i) => (
-                      <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                        <span style={{ color: '#c98a00', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>→</span>
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {/* Strengths */}
+              <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Strengths</div>
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {analysis.strengths.map((s, i) => (
+                    <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                      <span style={{ color: '#12936a', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </>
           ) : (

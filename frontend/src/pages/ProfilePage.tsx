@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ShieldCheck, ShieldAlert, Trash2, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, ShieldCheck, ShieldAlert, Trash2, X, Puzzle, Copy, Check } from 'lucide-react'
 import { userApi, type UpdateProfileRequest } from '@/api/user'
+import { extensionApi } from '@/api/extension'
 import { useAuth } from '@/context/AuthContext'
-import { formatDate, initials } from '@/lib/utils'
+import { formatDate, timeAgo, initials } from '@/lib/utils'
 import type { CareerLevel } from '@/types'
 
 const CAREER_LEVELS: { value: CareerLevel; label: string }[] = [
@@ -116,6 +117,186 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Browser extension tokens ──────────────────────────────────────────────────
+function NewTokenReveal({ token, label, onDone }: { token: string; label: string; onDone: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  function copy() {
+    navigator.clipboard.writeText(token).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    })
+  }
+
+  return (
+    <div style={{
+      borderRadius: 11, border: '1px solid color-mix(in srgb, var(--accent-brand) 30%, var(--border))',
+      background: 'color-mix(in srgb, var(--accent-brand) 6%, transparent)', padding: '14px 16px', marginBottom: 12,
+    }}>
+      <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>
+        Token generated: "{label}"
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <code style={{
+          flex: 1, fontSize: 12, padding: '8px 10px', borderRadius: 8,
+          background: 'var(--surface-2)', border: '1px solid var(--border)',
+          overflowX: 'auto', whiteSpace: 'nowrap', fontFamily: 'monospace',
+        }}>
+          {token}
+        </code>
+        <button
+          onClick={copy}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+            padding: '0 12px', borderRadius: 8, border: '1px solid var(--border)',
+            background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.5 }}>
+        Paste this into the Cammino extension popup. It won't be shown again — generate a new one if you lose it.
+      </div>
+      <button
+        onClick={onDone}
+        style={{
+          fontSize: 11.5, fontWeight: 600, color: 'var(--accent-brand)',
+          background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 10,
+        }}
+      >
+        Done
+      </button>
+    </div>
+  )
+}
+
+function ExtensionCard() {
+  const queryClient = useQueryClient()
+  const [labelInput, setLabelInput] = useState('')
+  const [showForm, setShowForm] = useState(false)
+  const [revealed, setRevealed] = useState<{ token: string; label: string } | null>(null)
+
+  const { data: tokensRes, isLoading } = useQuery({
+    queryKey: ['extension-tokens'],
+    queryFn: () => extensionApi.listTokens(),
+    staleTime: 15_000,
+  })
+  const tokens = tokensRes?.data?.data ?? []
+
+  const generate = useMutation({
+    mutationFn: (label: string) => extensionApi.generateToken(label),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['extension-tokens'] })
+      if (res.data.data) setRevealed({ token: res.data.data.token, label: res.data.data.label })
+      setLabelInput('')
+      setShowForm(false)
+    },
+  })
+
+  const revoke = useMutation({
+    mutationFn: (id: string) => extensionApi.revokeToken(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['extension-tokens'] }),
+  })
+
+  function handleGenerate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!labelInput.trim()) return
+    generate.mutate(labelInput.trim())
+  }
+
+  return (
+    <Card title="Browser extension">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16 }}>
+        <Puzzle size={16} style={{ color: 'var(--text-3)', marginTop: 1, flexShrink: 0 }} />
+        <p style={{ fontSize: 12.5, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>
+          Generate a personal access token to connect the Cammino Chrome extension and save jobs
+          straight from any job listing page.
+        </p>
+      </div>
+
+      {revealed && (
+        <NewTokenReveal token={revealed.token} label={revealed.label} onDone={() => setRevealed(null)} />
+      )}
+
+      {isLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="animate-pulse" style={{ height: 40, borderRadius: 9, background: 'var(--panel)' }} />
+        </div>
+      ) : tokens.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          {tokens.map((t) => (
+            <div key={t.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+              borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{t.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                  Created {formatDate(t.createdAt)}
+                  {t.lastUsedAt ? ` · last used ${timeAgo(t.lastUsedAt)}` : ' · never used'}
+                </div>
+              </div>
+              <button
+                onClick={() => revoke.mutate(t.id)}
+                disabled={revoke.isPending}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4, flexShrink: 0 }}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showForm ? (
+        <form onSubmit={handleGenerate} style={{ display: 'flex', gap: 8 }}>
+          <input
+            autoFocus
+            style={{ ...inputStyle, flex: 1 }}
+            value={labelInput}
+            onChange={(e) => setLabelInput(e.target.value)}
+            placeholder="e.g. Work laptop"
+            maxLength={100}
+          />
+          <button
+            type="submit"
+            disabled={!labelInput.trim() || generate.isPending}
+            style={{
+              padding: '0 16px', borderRadius: 9, fontSize: 12.5, fontWeight: 600,
+              background: 'var(--accent-brand)', border: 'none', color: '#fff',
+              cursor: labelInput.trim() ? 'pointer' : 'default', opacity: labelInput.trim() ? 1 : 0.6, flexShrink: 0,
+            }}
+          >
+            {generate.isPending ? 'Generating…' : 'Generate'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowForm(false); setLabelInput('') }}
+            style={{
+              padding: '0 12px', borderRadius: 9, fontSize: 12.5, fontWeight: 600,
+              background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            Cancel
+          </button>
+        </form>
+      ) : (
+        <button
+          onClick={() => setShowForm(true)}
+          style={{
+            fontSize: 12.5, fontWeight: 600, padding: '8px 14px', borderRadius: 9,
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            color: 'var(--text-2)', cursor: 'pointer',
+          }}
+        >
+          + Generate new token
+        </button>
+      )}
+    </Card>
   )
 }
 
@@ -278,6 +459,9 @@ export default function ProfilePage() {
             </div>
           </form>
         </Card>
+
+        {/* Browser extension */}
+        <ExtensionCard />
 
         {/* Danger zone */}
         <Card title="Danger zone">

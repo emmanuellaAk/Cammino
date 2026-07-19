@@ -59,12 +59,12 @@ export interface Resume {
 export interface ResumeAnalysis {
   id: string
   resumeId: string
-  overallScore: number
-  summary: string
   skills: string[]
+  experienceYears?: number
+  education?: string
   strengths: string[]
-  improvements: string[]
-  analysisDate: string
+  summary: string
+  analyzedAt: string
 }
 
 // ─── AI ───────────────────────────────────────────────────────────────────────
