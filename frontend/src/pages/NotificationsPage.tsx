@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { notificationsApi, type UpdateNotificationPreferenceRequest } from '@/api/notifications'
 import { timeAgo } from '@/lib/utils'
+import ErrorBanner from '@/components/ui/ErrorBanner'
 import type { Notification, NotificationType } from '@/types'
 
 const TYPE_META: Record<NotificationType, { label: string; color: string; Icon: typeof Bell }> = {
@@ -46,9 +47,17 @@ function NotificationRow({ n, onRead, onDelete }: {
   const navigate = useNavigate()
   const Icon = meta.Icon
 
+  function activate() {
+    if (!n.read) onRead(n.id)
+    if (n.relatedJobId) navigate(`/tracker/${n.relatedJobId}`)
+  }
+
   return (
     <div
-      onClick={() => { if (!n.read) onRead(n.id); if (n.relatedJobId) navigate(`/tracker/${n.relatedJobId}`) }}
+      onClick={activate}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate() } }}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 12,
         padding: '13px 14px', borderRadius: 12, cursor: 'pointer',
@@ -75,7 +84,8 @@ function NotificationRow({ n, onRead, onDelete }: {
 
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(n.id) }}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 3, flexShrink: 0 }}
+        aria-label="Delete notification"
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 3, flexShrink: 0, width: 24, height: 24 }}
       >
         <Trash2 size={13} />
       </button>
@@ -84,10 +94,13 @@ function NotificationRow({ n, onRead, onDelete }: {
 }
 
 // ── Preference toggle row ─────────────────────────────────────────────────────
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button
       onClick={() => onChange(!checked)}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
       style={{
         width: 36, height: 21, borderRadius: 980, border: 'none', cursor: 'pointer', flexShrink: 0,
         background: checked ? 'var(--accent-brand)' : 'var(--panel)', position: 'relative', transition: 'background 0.15s',
@@ -111,7 +124,7 @@ function PrefRow({ label, sub, checked, onChange }: {
         <div style={{ fontSize: 12.5, fontWeight: 600 }}>{label}</div>
         {sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{sub}</div>}
       </div>
-      <Toggle checked={checked} onChange={onChange} />
+      <Toggle checked={checked} onChange={onChange} label={label} />
     </div>
   )
 }
@@ -201,6 +214,11 @@ export default function NotificationsPage() {
             </div>
           }
         >
+          {(markRead.isError || remove.isError || markAllRead.isError) && (
+            <div style={{ marginBottom: 10 }}>
+              <ErrorBanner message="That didn't work — please try again." />
+            </div>
+          )}
           {isLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[0, 1, 2, 3].map((i) => <Skel key={i} />)}
@@ -226,6 +244,11 @@ export default function NotificationsPage() {
 
         {/* Right: preferences */}
         <Card title="Preferences">
+          {updatePrefs.isError && (
+            <div style={{ marginBottom: 10 }}>
+              <ErrorBanner message="Couldn't save that preference — please try again." />
+            </div>
+          )}
           {!prefs ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[0, 1, 2, 3].map((i) => <Skel key={i} h={20} r={6} />)}

@@ -55,7 +55,7 @@ export default function Header() {
           style={{
             width: 236, font: "400 13px 'Inter'", color: 'var(--text)',
             background: 'var(--surface-2)', border: '1px solid var(--border)',
-            borderRadius: 980, padding: '9px 14px 9px 36px', outline: 'none',
+            borderRadius: 980, padding: '9px 14px 9px 36px',
           }}
           onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
           onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
@@ -66,6 +66,7 @@ export default function Header() {
       <button
         onClick={toggleTheme}
         title="Toggle theme"
+        aria-label="Toggle theme"
         style={{
           width: 38, height: 38, borderRadius: 10,
           border: '1px solid var(--border)', background: 'var(--surface)',

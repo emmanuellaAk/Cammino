@@ -6,6 +6,7 @@ import { userApi, type UpdateProfileRequest } from '@/api/user'
 import { extensionApi } from '@/api/extension'
 import { useAuth } from '@/context/AuthContext'
 import { formatDate, timeAgo, initials } from '@/lib/utils'
+import ErrorBanner from '@/components/ui/ErrorBanner'
 import type { CareerLevel } from '@/types'
 
 const CAREER_LEVELS: { value: CareerLevel; label: string }[] = [
@@ -18,7 +19,7 @@ const CAREER_LEVELS: { value: CareerLevel; label: string }[] = [
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 13px 'Inter'", color: 'var(--text)',
   background: 'var(--surface-2)', border: '1px solid var(--border)',
-  borderRadius: 9, padding: '9px 12px', outline: 'none',
+  borderRadius: 9, padding: '9px 12px',
   boxSizing: 'border-box',
 }
 
@@ -75,6 +76,7 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: '#e5484d' }}>Delete account</span>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
             <X size={14} />
@@ -222,6 +224,12 @@ function ExtensionCard() {
         <NewTokenReveal token={revealed.token} label={revealed.label} onDone={() => setRevealed(null)} />
       )}
 
+      {(generate.isError || revoke.isError) && (
+        <div style={{ marginBottom: 12 }}>
+          <ErrorBanner message="That didn't work — please try again." />
+        </div>
+      )}
+
       {isLoading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="animate-pulse" style={{ height: 40, borderRadius: 9, background: 'var(--panel)' }} />
@@ -238,12 +246,14 @@ function ExtensionCard() {
                 <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
                   Created {formatDate(t.createdAt)}
                   {t.lastUsedAt ? ` · last used ${timeAgo(t.lastUsedAt)}` : ' · never used'}
+                  {t.expiresAt ? ` · expires ${formatDate(t.expiresAt)}` : ''}
                 </div>
               </div>
               <button
                 onClick={() => revoke.mutate(t.id)}
                 disabled={revoke.isPending}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4, flexShrink: 0 }}
+                aria-label={`Revoke token "${t.label}"`}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 4, flexShrink: 0, width: 24, height: 24 }}
               >
                 <Trash2 size={13} />
               </button>
@@ -441,7 +451,7 @@ export default function ProfilePage() {
                 style={{
                   padding: '9px 20px', borderRadius: 980, fontSize: 13, fontWeight: 600,
                   background: 'var(--accent-brand)', border: 'none', color: '#fff',
-                  cursor: save.isPending ? 'default' : 'pointer', opacity: save.isPending ? 0.7 : 1,
+                  cursor: save.isPending ? 'default' : 'pointer', opacity: save.isPending ? 0.6 : 1,
                 }}
               >
                 {save.isPending ? 'Saving…' : 'Save changes'}

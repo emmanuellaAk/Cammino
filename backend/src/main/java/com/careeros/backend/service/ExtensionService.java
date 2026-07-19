@@ -16,12 +16,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ExtensionService {
+
+    // Tokens default to expiring rather than living forever — a leaked token
+    // (compromised machine, accidentally logged) has a bounded blast radius.
+    private static final int DEFAULT_TOKEN_VALIDITY_DAYS = 180;
 
     private final ExtensionTokenRepository extensionTokenRepository;
     private final JobRepository            jobRepository;
@@ -42,6 +47,7 @@ public class ExtensionService {
                 .user(user)
                 .tokenHash(hash)
                 .label(request.label().trim())
+                .expiresAt(LocalDateTime.now().plusDays(DEFAULT_TOKEN_VALIDITY_DAYS))
                 .build();
         extensionTokenRepository.save(token);
 

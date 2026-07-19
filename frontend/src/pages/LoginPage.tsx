@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 14px 'Inter'", color: 'var(--text)',
   background: 'var(--surface-2)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: '11px 14px', outline: 'none', boxSizing: 'border-box',
+  borderRadius: 10, padding: '11px 14px', boxSizing: 'border-box',
 }
 
 export default function LoginPage() {
@@ -119,7 +119,7 @@ export default function LoginPage() {
                 borderRadius: 980, fontSize: 14, fontWeight: 600,
                 background: 'var(--accent-brand)', color: '#fff',
                 border: 'none', cursor: login.isPending ? 'default' : 'pointer',
-                opacity: login.isPending ? 0.75 : 1,
+                opacity: login.isPending ? 0.6 : 1,
               }}
             >
               {login.isPending ? 'Signing in…' : 'Sign in'}

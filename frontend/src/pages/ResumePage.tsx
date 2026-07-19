@@ -5,29 +5,12 @@ import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, B
 import { resumeApi } from '@/api/resume'
 import { resumeDraftsApi } from '@/api/resumeDrafts'
 import { timeAgo } from '@/lib/utils'
-import type { Resume, ResumeAnalysis } from '@/types'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import type { Resume } from '@/types'
 
-// ── Mock data (fully-offline demo mode only — used when the backend itself is unreachable) ──
-const MOCK_RESUMES: Resume[] = [
-  {
-    id: 'r-1', originalFileName: 'Amara_Okafor_CV_2026.pdf',
-    fileSize: 127_488, active: true, uploadedAt: '2026-06-15T09:00:00Z',
-  },
-]
-
-const MOCK_ANALYSIS: ResumeAnalysis = {
-  id: 'a-1', resumeId: 'r-1',
-  summary: 'Strong foundation with relevant technical experience. Your resume clearly demonstrates backend engineering skills and academic rigour, with concrete examples backed by numbers.',
-  skills: ['Java', 'Spring Boot', 'Python', 'TypeScript', 'React', 'PostgreSQL', 'REST APIs', 'Git', 'Docker', 'AWS'],
-  experienceYears: 3,
-  education: 'BSc Computer Science, University of Ghana',
-  strengths: [
-    'Concise, well-structured project descriptions',
-    'Strong academic background with relevant coursework clearly listed',
-    'Good breadth of technical skills across frontend and backend',
-    'Internship experience scoped and quantified with tech stack',
-  ],
-  analyzedAt: '2026-06-15T09:30:00Z',
+function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message
+  return message ?? fallback
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -68,32 +51,34 @@ function AnalysisHeader({ experienceYears, education }: { experienceYears?: numb
 }
 
 // ── Upload zone ───────────────────────────────────────────────────────────────
-function UploadZone({ onFile }: { onFile: (f: File) => void }) {
+function UploadZone({ onFile, disabled }: { onFile: (f: File) => void; disabled?: boolean }) {
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
+    if (disabled) return
     const file = e.dataTransfer.files[0]
     if (file?.type === 'application/pdf') onFile(file)
-  }, [onFile])
+  }, [onFile, disabled])
 
   return (
     <div
-      onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => { if (!disabled) inputRef.current?.click() }}
       style={{
         border: `2px dashed ${dragging ? 'var(--accent-brand)' : 'var(--border)'}`,
         borderRadius: 12, padding: '28px 20px', textAlign: 'center',
-        cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
+        cursor: disabled ? 'default' : 'pointer', transition: 'border-color 0.15s, background 0.15s',
         background: dragging ? 'color-mix(in srgb, var(--accent-brand) 5%, transparent)' : 'var(--surface-2)',
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       <input
-        ref={inputRef} type="file" accept=".pdf" style={{ display: 'none' }}
+        ref={inputRef} type="file" accept=".pdf" style={{ display: 'none' }} disabled={disabled}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f) }}
       />
       <Upload size={22} style={{ color: 'var(--accent-brand)', margin: '0 auto 10px' }} />
@@ -147,6 +132,7 @@ function ResumeRow({ resume, onActivate, onDelete }: {
       )}
       <button
         onClick={() => onDelete(resume.id)}
+        aria-label={`Delete ${resume.originalFileName}`}
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 3, flexShrink: 0 }}
       >
         <Trash2 size={14} />
@@ -159,12 +145,9 @@ function ResumeRow({ resume, onActivate, onDelete }: {
 export default function ResumePage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [localResumes, setLocalResumes] = useState<Resume[]>(MOCK_RESUMES)
-  const [analyzing, setAnalyzing] = useState(false)
-
-  const { data: draftsRes } = useQuery({
+  const { data: draftsRes, isError: draftsError } = useQuery({
     queryKey: ['resume-drafts'],
-    queryFn: async () => { try { return await resumeDraftsApi.list() } catch { return null } },
+    queryFn: () => resumeDraftsApi.list(),
     staleTime: 30_000,
   })
   const drafts = draftsRes?.data?.data ?? []
@@ -178,23 +161,24 @@ export default function ResumePage() {
     },
   })
 
-  const { data: resumesRes } = useQuery({
+  const { data: resumesRes, isLoading: loadingResumes, isError: resumesError, refetch: refetchResumes } = useQuery({
     queryKey: ['resumes'],
-    queryFn: async () => { try { return await resumeApi.list() } catch { return null } },
+    queryFn: () => resumeApi.list(),
     staleTime: 60_000,
   })
 
-  const activeId = (resumesRes?.data?.data ?? localResumes).find((r) => r.active)?.id
+  const resumes = resumesRes?.data?.data ?? []
+  const activeId = resumes.find((r) => r.active)?.id
 
-  const { data: analysisRes } = useQuery({
+  const { data: analysisRes, isError: analysisError } = useQuery({
     queryKey: ['resume-analysis', activeId],
-    queryFn: async () => { try { return await resumeApi.getAnalysis() } catch { return null } },
+    queryFn: () => resumeApi.getAnalysis(),
     enabled: !!activeId,
     staleTime: 300_000,
+    retry: false, // a 404 here just means "no analysis yet" — don't retry, and don't confuse it with a real failure
   })
 
-  const resumes = resumesRes?.data?.data ?? localResumes
-  const analysis = analysisRes?.data?.data ?? (activeId ? MOCK_ANALYSIS : null)
+  const analysis = analysisRes?.data?.data ?? null
 
   const upload = useMutation({
     mutationFn: (file: File) => resumeApi.upload(file),
@@ -211,49 +195,13 @@ export default function ResumePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['resumes'] }),
   })
 
-  function handleFile(file: File) {
-    if (resumesRes) {
-      upload.mutate(file)
-    } else {
-      const mock: Resume = {
-        id: `r-local-${Date.now()}`,
-        originalFileName: file.name,
-        fileSize: file.size,
-        active: localResumes.length === 0,
-        uploadedAt: new Date().toISOString(),
-      }
-      setLocalResumes((prev) => [...prev, mock])
-    }
-  }
-
-  function handleActivate(id: string) {
-    if (resumesRes) {
-      activate.mutate(id)
-    } else {
-      setLocalResumes((prev) => prev.map((r) => ({ ...r, active: r.id === id })))
-    }
-  }
-
-  function handleDelete(id: string) {
-    if (resumesRes) {
-      remove.mutate(id)
-    } else {
-      setLocalResumes((prev) => prev.filter((r) => r.id !== id))
-    }
-  }
-
-  async function handleAnalyze() {
-    if (!activeId) return
-    setAnalyzing(true)
-    try {
-      await resumeApi.analyze()
-      queryClient.invalidateQueries({ queryKey: ['resume-analysis', activeId] })
-    } catch {
-      // mock: just show existing analysis
-    } finally {
-      setTimeout(() => setAnalyzing(false), 1200)
-    }
-  }
+  const analyze = useMutation({
+    mutationFn: () => resumeApi.analyze(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['resume-analysis', activeId] }),
+  })
+  const analyzeErrorMessage = analyze.isError
+    ? apiErrorMessage(analyze.error, "Couldn't analyse this resume — please try again.")
+    : null
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }} className="animate-fade-up">
@@ -261,7 +209,9 @@ export default function ResumePage() {
 
         {/* ── Left: Analysis ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {analysis ? (
+          {analysisError ? (
+            <ErrorBanner message="Couldn't load the resume analysis." />
+          ) : analysis ? (
             <>
               {/* Score + summary */}
               <div style={{
@@ -320,6 +270,10 @@ export default function ResumePage() {
 
         {/* ── Right: Files ───────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {resumesError && (
+            <ErrorBanner message="Couldn't load your resumes." onRetry={() => refetchResumes()} />
+          )}
+
           {/* Resume list */}
           {resumes.length > 0 && (
             <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px 18px 14px', boxShadow: 'var(--shadow)' }}>
@@ -328,40 +282,57 @@ export default function ResumePage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {resumes.map((r) => (
-                  <ResumeRow key={r.id} resume={r} onActivate={handleActivate} onDelete={handleDelete} />
+                  <ResumeRow key={r.id} resume={r} onActivate={(id) => activate.mutate(id)} onDelete={(id) => remove.mutate(id)} />
                 ))}
               </div>
+              {(activate.isError || remove.isError) && (
+                <div style={{ marginTop: 10 }}>
+                  <ErrorBanner message={apiErrorMessage(activate.error ?? remove.error, "That didn't work — please try again.")} />
+                </div>
+              )}
             </div>
           )}
 
           {/* Upload */}
           <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px', boxShadow: 'var(--shadow)' }}>
-            {resumes.length === 0 && (
+            {resumes.length === 0 && !loadingResumes && (
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>Upload resume</div>
             )}
-            <UploadZone onFile={handleFile} />
+            <UploadZone onFile={(f) => upload.mutate(f)} disabled={upload.isPending} />
             {upload.isPending && (
               <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', marginTop: 10 }}>Uploading…</div>
+            )}
+            {upload.isError && (
+              <div style={{ marginTop: 10 }}>
+                <ErrorBanner message={apiErrorMessage(upload.error, "Couldn't upload this resume — please try again.")} />
+              </div>
             )}
           </div>
 
           {/* Analyse button */}
           {activeId && (
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzing}
-              style={{
-                width: '100%', padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 600,
-                background: 'var(--accent-brand)', color: '#fff', border: 'none',
-                cursor: analyzing ? 'default' : 'pointer', opacity: analyzing ? 0.75 : 1,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              }}
-            >
-              {analyzing
-                ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analysing…</>
-                : <><Zap size={14} /> Analyse resume</>
-              }
-            </button>
+            <div>
+              <button
+                onClick={() => analyze.mutate()}
+                disabled={analyze.isPending}
+                style={{
+                  width: '100%', padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 600,
+                  background: 'var(--accent-brand)', color: '#fff', border: 'none',
+                  cursor: analyze.isPending ? 'default' : 'pointer', opacity: analyze.isPending ? 0.6 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                }}
+              >
+                {analyze.isPending
+                  ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analysing…</>
+                  : <><Zap size={14} /> Analyse resume</>
+                }
+              </button>
+              {analyzeErrorMessage && (
+                <div style={{ marginTop: 10 }}>
+                  <ErrorBanner message={analyzeErrorMessage} />
+                </div>
+              )}
+            </div>
           )}
 
           {/* Resume builder */}
@@ -370,6 +341,12 @@ export default function ResumePage() {
               <Sparkles size={14} style={{ color: 'var(--accent-brand)' }} />
               <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>Resume builder</span>
             </div>
+
+            {draftsError && (
+              <div style={{ marginBottom: 12 }}>
+                <ErrorBanner message="Couldn't load your saved drafts." />
+              </div>
+            )}
 
             {drafts.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
@@ -402,6 +379,11 @@ export default function ResumePage() {
             >
               <Plus size={13} /> {createDraft.isPending ? 'Creating…' : 'New resume'}
             </button>
+            {createDraft.isError && (
+              <div style={{ marginTop: 10 }}>
+                <ErrorBanner message={apiErrorMessage(createDraft.error, "Couldn't create a new draft — please try again.")} />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -7,7 +7,13 @@ import {
 import { emailApi } from '@/api/email'
 import { jobsApi } from '@/api/jobs'
 import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
+import ErrorBanner from '@/components/ui/ErrorBanner'
 import type { EmailScanResult, ScanConfidence } from '@/types'
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message
+  return message ?? fallback
+}
 
 const CONFIDENCE_META: Record<ScanConfidence, { label: string; color: string }> = {
   HIGH:   { label: 'High confidence',   color: '#12936a' },
@@ -188,7 +194,7 @@ export default function InboxPage() {
                   display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
                   padding: '8px 14px', borderRadius: 9, border: 'none',
                   background: 'var(--accent-brand)', color: '#fff',
-                  cursor: scan.isPending ? 'default' : 'pointer', opacity: scan.isPending ? 0.75 : 1,
+                  cursor: scan.isPending ? 'default' : 'pointer', opacity: scan.isPending ? 0.6 : 1,
                 }}
               >
                 <RefreshCw size={13} style={scan.isPending ? { animation: 'spin 0.8s linear infinite' } : undefined} />
@@ -198,6 +204,7 @@ export default function InboxPage() {
                 onClick={() => disconnect.mutate()}
                 disabled={disconnect.isPending}
                 title="Disconnect Gmail"
+                aria-label="Disconnect Gmail"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 32, height: 32, borderRadius: 9, border: '1px solid var(--border)',
@@ -228,12 +235,20 @@ export default function InboxPage() {
                 style={{
                   fontSize: 12, fontWeight: 600, padding: '9px 16px', borderRadius: 9, border: 'none',
                   background: 'var(--accent-brand)', color: '#fff',
-                  cursor: connect.isPending ? 'default' : 'pointer', opacity: connect.isPending ? 0.75 : 1,
+                  cursor: connect.isPending ? 'default' : 'pointer', opacity: connect.isPending ? 0.6 : 1,
                   flexShrink: 0,
                 }}
               >
                 {connect.isPending ? 'Redirecting…' : 'Connect Gmail'}
               </button>
+            </div>
+          )}
+          {(connect.isError || disconnect.isError || scan.isError) && (
+            <div style={{ marginTop: 14 }}>
+              <ErrorBanner message={apiErrorMessage(
+                connect.error ?? disconnect.error ?? scan.error,
+                "That didn't work — please try again."
+              )} />
             </div>
           )}
         </div>

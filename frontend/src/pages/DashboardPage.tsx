@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { analyticsApi } from '@/api/analytics'
 import { jobsApi } from '@/api/jobs'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
-import { MOCK_JOBS } from '@/lib/mock-jobs'
-import type { ApplicationStatus, AnalyticsOverview } from '@/types'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import type { ApplicationStatus } from '@/types'
 
 const PIPELINE_STATUSES: ApplicationStatus[] = [
   'SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED',
@@ -110,47 +111,36 @@ function Empty({ text }: { text: string }) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { data: overviewRes, isLoading: loadingOverview } = useQuery({
+  const navigate = useNavigate()
+
+  const { data: overviewRes, isLoading: loadingOverview, isError: overviewError, refetch: refetchOverview } = useQuery({
     queryKey: ['analytics', 'overview'],
-    queryFn: async () => { try { return await analyticsApi.overview() } catch { return null } },
+    queryFn: () => analyticsApi.overview(),
     staleTime: 60_000,
   })
 
-  const { data: trendRes, isLoading: loadingTrend } = useQuery({
+  const { data: trendRes, isLoading: loadingTrend, isError: trendError } = useQuery({
     queryKey: ['analytics', 'trend', 'weekly'],
-    queryFn: async () => { try { return await analyticsApi.trend('weekly') } catch { return null } },
+    queryFn: () => analyticsApi.trend('weekly'),
     staleTime: 60_000,
   })
 
-  const { data: recentRes, isLoading: loadingRecent } = useQuery({
+  const { data: recentRes, isLoading: loadingRecent, isError: recentError } = useQuery({
     queryKey: ['jobs', 'recent-dashboard'],
-    queryFn: async () => { try { return await jobsApi.list({ size: 6, sortBy: 'updatedAt', sortDir: 'desc' }) } catch { return null } },
+    queryFn: () => jobsApi.list({ size: 6, sortBy: 'updatedAt', sortDir: 'desc' }),
     staleTime: 30_000,
   })
 
-  const { data: deadlinesRes } = useQuery({
+  const { data: deadlinesRes, isError: deadlinesError } = useQuery({
     queryKey: ['jobs', 'deadlines-dashboard'],
-    queryFn: async () => { try { return await jobsApi.list({ size: 6, sortBy: 'deadline', sortDir: 'asc' }) } catch { return null } },
+    queryFn: () => jobsApi.list({ size: 6, sortBy: 'deadline', sortDir: 'asc' }),
     staleTime: 60_000,
   })
 
-  // Fall back to mock data when backend is not available
-  const mockSorted = [...MOCK_JOBS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-  const mockOverview: AnalyticsOverview = {
-    total: MOCK_JOBS.length, saved: 2, applied: 3, inAssessment: 2, inInterview: 2, offers: 1, rejected: 2,
-    active: 7, responseRate: 58, interviewRate: 25, offerRate: 8, avgDaysToResponse: 12,
-  }
-
-  const ov = overviewRes?.data?.data ?? mockOverview
-  const trend = trendRes?.data?.data ?? [
-    { period: 'Jun 2', periodStart: '', count: 1 },
-    { period: 'Jun 9', periodStart: '', count: 3 },
-    { period: 'Jun 16', periodStart: '', count: 2 },
-    { period: 'Jun 23', periodStart: '', count: 4 },
-    { period: 'Jun 30', periodStart: '', count: 2 },
-  ]
-  const recent = recentRes?.data?.data?.content ?? mockSorted.slice(0, 6)
-  const deadlines = (deadlinesRes?.data?.data?.content ?? MOCK_JOBS.filter((j) => j.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!))).filter((j) => !!j.deadline).slice(0, 6)
+  const ov = overviewRes?.data?.data
+  const trend = trendRes?.data?.data ?? []
+  const recent = recentRes?.data?.data?.content ?? []
+  const deadlines = (deadlinesRes?.data?.data?.content ?? []).filter((j) => !!j.deadline).slice(0, 6)
 
   const maxTrend = Math.max(...trend.map((t) => t.count), 1)
 
@@ -166,6 +156,12 @@ export default function DashboardPage() {
 
   return (
     <div style={{ maxWidth: 1080, margin: '0 auto' }} className="animate-fade-up">
+
+      {overviewError && (
+        <div style={{ marginBottom: 14 }}>
+          <ErrorBanner message="Couldn't load your overview stats." onRetry={() => refetchOverview()} />
+        </div>
+      )}
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
@@ -247,6 +243,8 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          ) : trendError ? (
+            <ErrorBanner message="Couldn't load trend data." />
           ) : trend.length === 0 ? (
             <Empty text="No trend data yet." />
           ) : (
@@ -273,6 +271,8 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          ) : recentError ? (
+            <ErrorBanner message="Couldn't load recent activity." />
           ) : recent.length === 0 ? (
             <Empty text="No applications yet — add your first job." />
           ) : (
@@ -282,6 +282,10 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={job.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/tracker/${job.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/tracker/${job.id}`) } }}
                     className="hover:bg-[var(--border-2)] transition-colors"
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 10, cursor: 'pointer' }}
                   >
@@ -318,7 +322,9 @@ export default function DashboardPage() {
 
         {/* Upcoming deadlines */}
         <Card title="Upcoming deadlines">
-          {deadlines.length === 0 ? (
+          {deadlinesError ? (
+            <ErrorBanner message="Couldn't load upcoming deadlines." />
+          ) : deadlines.length === 0 ? (
             <Empty text="No upcoming deadlines." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -328,6 +334,10 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={job.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/tracker/${job.id}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/tracker/${job.id}`) } }}
                     className="hover:bg-[var(--border-2)] transition-colors"
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 10, cursor: 'pointer' }}
                   >

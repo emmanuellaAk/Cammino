@@ -68,11 +68,15 @@ public class RateLimitingFilter implements Filter {
     }
 
     private String clientIp(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
+        // Only honor X-Forwarded-For when it actually arrived via a trusted reverse
+        // proxy — otherwise any client can set this header to a fresh value on every
+        // request and get a brand-new rate-limit bucket each time.
+        if (forwarded != null && !forwarded.isBlank() && props.getTrustedProxies().contains(remoteAddr)) {
             return forwarded.split(",")[0].trim();
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 
     private Bucket newBucket() {

@@ -7,7 +7,7 @@ import { authApi } from '@/api/auth'
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 14px 'Inter'", color: 'var(--text)',
   background: 'var(--surface-2)', border: '1px solid var(--border)',
-  borderRadius: 10, padding: '11px 14px', outline: 'none', boxSizing: 'border-box',
+  borderRadius: 10, padding: '11px 14px', boxSizing: 'border-box',
 }
 
 function passwordStrength(pw: string) {

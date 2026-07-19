@@ -5,72 +5,14 @@ import { ArrowLeft, ExternalLink, Trash2, Plus, Zap, ChevronDown } from 'lucide-
 import { jobsApi } from '@/api/jobs'
 import { resumeApi } from '@/api/resume'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
-import { MOCK_JOBS } from '@/lib/mock-jobs'
-import type { ApplicationStatus, JobMatch, ApplicationNote } from '@/types'
+import ErrorBanner from '@/components/ui/ErrorBanner'
+import type { ApplicationStatus } from '@/types'
 
 const STATUSES: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
 
-// ── Mock AI match data ────────────────────────────────────────────────────────
-const MOCK_MATCHES: Record<string, Omit<JobMatch, 'id' | 'resumeId' | 'jobId'>> = {
-  'm-8': {
-    matchScore: 87,
-    summary: 'Strong match. Your backend engineering experience and Java skills align closely with this role. Distributed systems experience would strengthen your application.',
-    matchingSkills: ['Java', 'Spring Boot', 'REST APIs', 'PostgreSQL', 'System design', 'Git'],
-    missingSkills: ['Go', 'Kubernetes', 'Distributed systems at scale'],
-    recommendations: [
-      'Quantify the scale of systems you have built (users, requests/sec)',
-      'Add any open-source contributions or side projects to your profile',
-      'Prepare a strong answer on your most complex system design challenge',
-    ],
-    analysisDate: new Date().toISOString(),
-  },
-  'm-6': {
-    matchScore: 74,
-    summary: 'Good match. Your experience covers most of the core requirements, though production ML pipeline experience is listed as a plus.',
-    matchingSkills: ['Python', 'React', 'Node.js', 'PostgreSQL', 'REST APIs'],
-    missingSkills: ['ML pipelines', 'GraphQL', 'React Native'],
-    recommendations: [
-      'Highlight any data-driven projects in your portfolio',
-      'Emphasise cross-functional teamwork experience',
-      'Research Meta\'s product principles and reference them in your cover letter',
-    ],
-    analysisDate: new Date().toISOString(),
-  },
-  'm-3': {
-    matchScore: 81,
-    summary: 'Strong match. Stripe values API design and reliability engineering — both areas your experience touches well.',
-    matchingSkills: ['TypeScript', 'Node.js', 'REST APIs', 'PostgreSQL', 'Testing', 'Git'],
-    missingSkills: ['Payments domain knowledge', 'Go', 'Ruby'],
-    recommendations: [
-      'Tailor your cover letter to mention payments reliability or fintech interest',
-      'Showcase any experience with high-availability systems',
-      'Mention familiarity with Stripe\'s developer products if applicable',
-    ],
-    analysisDate: new Date().toISOString(),
-  },
-}
-
-const FALLBACK_MATCH: Omit<JobMatch, 'id' | 'resumeId' | 'jobId'> = {
-  matchScore: 68,
-  summary: 'Moderate match. Your core skills overlap with this role, but there are some gaps worth addressing in your application.',
-  matchingSkills: ['JavaScript', 'Python', 'REST APIs', 'Git', 'Problem solving'],
-  missingSkills: ['Domain-specific experience', 'Additional tools listed in JD'],
-  recommendations: [
-    'Tailor your resume to the specific language and tools mentioned in the job description',
-    'Write a targeted cover letter that bridges your experience to their requirements',
-    'Research the company\'s tech stack and mention familiarity where relevant',
-  ],
-  analysisDate: new Date().toISOString(),
-}
-
-const MOCK_NOTES: Record<string, ApplicationNote[]> = {
-  'm-8': [
-    { id: 'n-1', jobId: 'm-8', content: 'Had a great first round — focus on system design next. They care a lot about scalability trade-offs.', createdAt: new Date(Date.now() - 86400000 * 3).toISOString() },
-    { id: 'n-2', jobId: 'm-8', content: 'Recruiter said the team is 8 engineers. Weekly sprints, strong eng culture.', createdAt: new Date(Date.now() - 86400000 * 1).toISOString() },
-  ],
-  'm-10': [
-    { id: 'n-3', jobId: 'm-10', content: 'Offer: £60k base + 10% bonus + equity. Need to negotiate. Deadline to accept is in 5 days.', createdAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-  ],
+function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message
+  return message ?? fallback
 }
 
 // ── Score circle ──────────────────────────────────────────────────────────────
@@ -197,34 +139,30 @@ export default function JobDetailPage() {
   const queryClient = useQueryClient()
   const [noteInput, setNoteInput] = useState('')
   const [localStatus, setLocalStatus] = useState<ApplicationStatus | null>(null)
-  const [localNotes, setLocalNotes] = useState<ApplicationNote[]>(() => MOCK_NOTES[id ?? ''] ?? [])
 
-  const { data: jobRes, isLoading } = useQuery({
+  const { data: jobRes, isLoading, isError: jobError } = useQuery({
     queryKey: ['job', id],
-    queryFn: async () => { try { return await jobsApi.get(id!) } catch { return null } },
+    queryFn: () => jobsApi.get(id!),
     enabled: !!id,
+    retry: false,
   })
 
-  const { data: notesRes } = useQuery({
+  const { data: notesRes, isError: notesError } = useQuery({
     queryKey: ['job', id, 'notes'],
-    queryFn: async () => { try { return await jobsApi.listNotes(id!) } catch { return null } },
+    queryFn: () => jobsApi.listNotes(id!),
     enabled: !!id,
   })
 
-  const { data: matchRes, isLoading: matchLoading } = useQuery({
+  const { data: matchRes, isLoading: matchLoading, isError: matchLoadError } = useQuery({
     queryKey: ['job', id, 'match'],
-    queryFn: async () => { try { return await resumeApi.getJobMatch(id!) } catch { return null } },
+    queryFn: () => resumeApi.getJobMatch(id!),
     enabled: !!id,
+    retry: false, // a 404 here just means "no match yet" — not a real failure
   })
 
-  const mockJob = MOCK_JOBS.find((j) => j.id === id)
-  const usingMockJob = !jobRes?.data?.data
-  const job = jobRes?.data?.data ?? mockJob
-  const notes = notesRes?.data?.data ?? localNotes
-  // Real jobs only show real AI match data (or an empty "run it" prompt) — the
-  // canned per-job mock only applies in fully-offline demo mode (no backend at all).
-  const matchData = matchRes?.data?.data
-    ?? (usingMockJob ? { ...(MOCK_MATCHES[id ?? ''] ?? FALLBACK_MATCH), id: 'mock', jobId: id ?? '', resumeId: 'mock' } : null)
+  const job = jobRes?.data?.data
+  const notes = notesRes?.data?.data ?? []
+  const matchData = matchRes?.data?.data ?? null
   const status = localStatus ?? job?.status ?? 'SAVED'
 
   const runMatch = useMutation({
@@ -232,8 +170,7 @@ export default function JobDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['job', id, 'match'] }),
   })
 
-  const matchErrorMessage = (runMatch.error as { response?: { data?: { message?: string } } } | null)
-    ?.response?.data?.message ?? 'Something went wrong — please try again.'
+  const matchErrorMessage = apiErrorMessage(runMatch.error, 'Something went wrong — please try again.')
 
   const updateStatus = useMutation({
     mutationFn: (s: ApplicationStatus) => jobsApi.updateStatus(id!, s),
@@ -254,30 +191,19 @@ export default function JobDetailPage() {
   })
 
   function handleStatusChange(s: ApplicationStatus) {
+    const prevStatus = status
     setLocalStatus(s)
-    updateStatus.mutate(s)
+    updateStatus.mutate(s, { onError: () => setLocalStatus(prevStatus) })
   }
 
   function handleAddNote() {
     const content = noteInput.trim()
-    if (!content) return
-    if (notesRes) {
-      addNote.mutate(content)
-    } else {
-      const newNote: ApplicationNote = {
-        id: `local-${Date.now()}`, jobId: id!, content, createdAt: new Date().toISOString(),
-      }
-      setLocalNotes((prev) => [newNote, ...prev])
-    }
-    setNoteInput('')
+    if (!content || addNote.isPending) return
+    addNote.mutate(content, { onSuccess: () => setNoteInput('') })
   }
 
   function handleDeleteNote(noteId: string) {
-    if (notesRes) {
-      deleteNote.mutate(noteId)
-    } else {
-      setLocalNotes((prev) => prev.filter((n) => n.id !== noteId))
-    }
+    deleteNote.mutate(noteId)
   }
 
   if (isLoading) {
@@ -292,10 +218,12 @@ export default function JobDetailPage() {
     )
   }
 
-  if (!job) {
+  if (jobError || !job) {
     return (
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '60px 0', textAlign: 'center' }}>
-        <div style={{ fontSize: 15, color: 'var(--text-3)' }}>Job not found.</div>
+        <div style={{ fontSize: 15, color: 'var(--text-3)' }}>
+          {jobError ? "Couldn't load this job — please try again." : 'Job not found.'}
+        </div>
         <button onClick={() => navigate('/tracker')} style={{ marginTop: 16, color: 'var(--accent-brand)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>
           ← Back to tracker
         </button>
@@ -387,7 +315,7 @@ export default function JobDetailPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Card
             title="AI match analysis"
-            action={matchData && !usingMockJob ? (
+            action={matchData ? (
               <button
                 onClick={() => runMatch.mutate()}
                 disabled={runMatch.isPending}
@@ -402,6 +330,11 @@ export default function JobDetailPage() {
               </button>
             ) : undefined}
           >
+            {matchLoadError && (
+              <div style={{ marginBottom: 16 }}>
+                <ErrorBanner message="Couldn't load the match analysis." />
+              </div>
+            )}
             {matchLoading ? (
               <div className="animate-pulse" style={{ height: 200, borderRadius: 10, background: 'var(--panel)' }} />
             ) : matchData ? (
@@ -467,17 +400,17 @@ export default function JobDetailPage() {
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     padding: '9px 18px', borderRadius: 980, fontSize: 13, fontWeight: 600,
                     background: 'var(--accent-brand)', color: '#fff', border: 'none',
-                    cursor: runMatch.isPending ? 'default' : 'pointer', opacity: runMatch.isPending ? 0.75 : 1,
+                    cursor: runMatch.isPending ? 'default' : 'pointer', opacity: runMatch.isPending ? 0.6 : 1,
                   }}
                 >
                   <Zap size={14} />
                   {runMatch.isPending ? 'Analysing…' : 'Run AI match'}
                 </button>
-                {runMatch.isError && (
-                  <div style={{ fontSize: 12, color: '#e5484d', marginTop: 12, lineHeight: 1.5 }}>
-                    {matchErrorMessage}
-                  </div>
-                )}
+              </div>
+            )}
+            {runMatch.isError && (
+              <div style={{ marginTop: 16 }}>
+                <ErrorBanner message={matchErrorMessage} />
               </div>
             )}
           </Card>
@@ -499,7 +432,7 @@ export default function JobDetailPage() {
                 style={{
                   width: '100%', font: "400 13px 'Inter'", color: 'var(--text)',
                   background: 'var(--surface-2)', border: '1px solid var(--border)',
-                  borderRadius: 9, padding: '9px 12px', outline: 'none',
+                  borderRadius: 9, padding: '9px 12px',
                   resize: 'vertical', lineHeight: 1.5, boxSizing: 'border-box',
                 }}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
@@ -507,18 +440,28 @@ export default function JobDetailPage() {
               />
               <button
                 onClick={handleAddNote}
-                disabled={!noteInput.trim()}
+                disabled={!noteInput.trim() || addNote.isPending}
                 className="flex items-center gap-[5px] self-end"
                 style={{
                   padding: '7px 14px', borderRadius: 980, fontSize: 12, fontWeight: 600,
                   background: noteInput.trim() ? 'var(--accent-brand)' : 'var(--panel)',
                   color: noteInput.trim() ? '#fff' : 'var(--text-3)',
-                  border: 'none', cursor: noteInput.trim() ? 'pointer' : 'default',
+                  border: 'none', cursor: noteInput.trim() && !addNote.isPending ? 'pointer' : 'default',
+                  opacity: addNote.isPending ? 0.6 : 1,
                 }}
               >
-                <Plus size={13} /> Save note
+                <Plus size={13} /> {addNote.isPending ? 'Saving…' : 'Save note'}
               </button>
+              {addNote.isError && (
+                <ErrorBanner message={apiErrorMessage(addNote.error, "Couldn't save this note — please try again.")} />
+              )}
             </div>
+
+            {notesError && (
+              <div style={{ marginBottom: 12 }}>
+                <ErrorBanner message="Couldn't load notes for this job." />
+              </div>
+            )}
 
             {/* Note list */}
             {notes.length > 0 && (
@@ -534,6 +477,7 @@ export default function JobDetailPage() {
                       </p>
                       <button
                         onClick={() => handleDeleteNote(note.id)}
+                        aria-label="Delete note"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 2, flexShrink: 0 }}
                       >
                         <Trash2 size={13} />
@@ -545,7 +489,13 @@ export default function JobDetailPage() {
               </div>
             )}
 
-            {notes.length === 0 && !noteInput && (
+            {deleteNote.isError && (
+              <div style={{ marginTop: 10 }}>
+                <ErrorBanner message={apiErrorMessage(deleteNote.error, "Couldn't delete this note — please try again.")} />
+              </div>
+            )}
+
+            {notes.length === 0 && !noteInput && !notesError && (
               <div style={{ textAlign: 'center', padding: '16px 0 4px', color: 'var(--text-3)', fontSize: 12 }}>
                 No notes yet — add context, reminders, or interview feedback.
               </div>

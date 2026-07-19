@@ -104,3 +104,18 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Visible keyboard-focus ring — many inputs set inline outline:none for a
+   cleaner default look, which also strips the browser's native focus
+   indicator entirely. This restores one globally via :focus-visible (so it
+   only shows for keyboard/programmatic focus, not every mouse click). */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent-brand);
+  border-color: var(--accent-brand) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-pulse {
+    animation: none !important;
+  }
+}

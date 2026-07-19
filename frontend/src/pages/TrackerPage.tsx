@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, MoreHorizontal, Calendar, X } from 'lucide-react'
 import { jobsApi, type CreateJobRequest } from '@/api/jobs'
 import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
-import { MOCK_JOBS } from '@/lib/mock-jobs'
+import ErrorBanner from '@/components/ui/ErrorBanner'
 import type { ApplicationStatus, Job } from '@/types'
 
 const COLUMNS: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
@@ -19,7 +19,7 @@ function groupByStatus(jobs: Job[]) {
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 13px 'Inter'", color: 'var(--text)',
   background: 'var(--surface-2)', border: '1px solid var(--border)',
-  borderRadius: 9, padding: '9px 12px', outline: 'none',
+  borderRadius: 9, padding: '9px 12px',
   boxSizing: 'border-box',
 }
 
@@ -119,6 +119,9 @@ function JobCard({ job, onMove }: { job: Job; onMove: (id: string, status: Appli
         <div style={{ position: 'relative' }}>
           <button
             onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
+            aria-label="Move to another status"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
             style={{
               width: 28, height: 28, borderRadius: 7,
               border: '1px solid var(--border)', background: 'var(--surface-2)',
@@ -155,11 +158,12 @@ function JobCard({ job, onMove }: { job: Job; onMove: (id: string, status: Appli
 }
 
 // ── Add job modal ─────────────────────────────────────────────────────────────
-function AddJobModal({ defaultStatus, onClose, onSubmit, loading }: {
+function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   defaultStatus: ApplicationStatus
   onClose: () => void
   onSubmit: (data: CreateJobRequest) => void
   loading: boolean
+  error?: string
 }) {
   const [form, setForm] = useState<CreateJobRequest>({ jobTitle: '', company: '', status: defaultStatus })
 
@@ -190,6 +194,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading }: {
           <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Add job</span>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
             <X size={14} />
@@ -236,6 +241,8 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading }: {
             <input style={inputStyle} value={form.source ?? ''} onChange={set('source')} placeholder="LinkedIn, Referral…" />
           </Field>
 
+          {error && <ErrorBanner message={error} />}
+
           {/* Actions */}
           <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-end', marginTop: 6 }}>
             <button type="button" onClick={onClose} style={{
@@ -247,7 +254,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading }: {
             <button type="submit" disabled={loading} style={{
               padding: '9px 18px', borderRadius: 980, fontSize: 13, fontWeight: 600,
               background: 'var(--accent-brand)', border: 'none', color: '#fff', cursor: loading ? 'default' : 'pointer',
-              opacity: loading ? 0.7 : 1,
+              opacity: loading ? 0.6 : 1,
             }}>
               {loading ? 'Adding…' : 'Add job'}
             </button>
@@ -281,6 +288,7 @@ function BoardColumn({ status, jobs, onAdd, onMove }: {
         </span>
         <button
           onClick={() => onAdd(status)}
+          aria-label={`Add job to ${meta.label}`}
           style={{
             width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)',
             background: 'var(--surface)', color: 'var(--text-3)', display: 'flex',
@@ -318,19 +326,13 @@ export default function TrackerPage() {
   const queryClient = useQueryClient()
   const [modal, setModal] = useState<ApplicationStatus | null>(null)
 
-  const { data: res, isLoading } = useQuery({
+  const { data: res, isLoading, isError, refetch } = useQuery({
     queryKey: ['jobs', 'board'],
-    queryFn: async () => {
-      try {
-        return await jobsApi.list({ size: 200, sortBy: 'updatedAt', sortDir: 'desc' })
-      } catch {
-        return null
-      }
-    },
+    queryFn: () => jobsApi.list({ size: 200, sortBy: 'updatedAt', sortDir: 'desc' }),
     staleTime: 30_000,
   })
 
-  const jobs = res?.data?.data?.content ?? MOCK_JOBS
+  const jobs = res?.data?.data?.content ?? []
   const board = groupByStatus(jobs)
 
   const moveJob = useMutation({
@@ -365,6 +367,9 @@ export default function TrackerPage() {
       setModal(null)
     },
   })
+  const addJobError = addJob.isError
+    ? ((addJob.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "Couldn't add this job — please try again.")
+    : undefined
 
   const handleMove = useCallback((id: string, status: ApplicationStatus) => {
     moveJob.mutate({ id, status })
@@ -393,17 +398,21 @@ export default function TrackerPage() {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, minHeight: 0 }}>
-        {COLUMNS.map((s) => (
-          <BoardColumn
-            key={s}
-            status={s}
-            jobs={board[s]}
-            onAdd={setModal}
-            onMove={handleMove}
-          />
-        ))}
-      </div>
+      {isError ? (
+        <ErrorBanner message="Couldn't load your job tracker." onRetry={() => refetch()} />
+      ) : (
+        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, minHeight: 0 }}>
+          {COLUMNS.map((s) => (
+            <BoardColumn
+              key={s}
+              status={s}
+              jobs={board[s]}
+              onAdd={setModal}
+              onMove={handleMove}
+            />
+          ))}
+        </div>
+      )}
 
       {modal && (
         <AddJobModal
@@ -411,6 +420,7 @@ export default function TrackerPage() {
           onClose={() => setModal(null)}
           onSubmit={(data) => addJob.mutate(data)}
           loading={addJob.isPending}
+          error={addJobError}
         />
       )}
     </>

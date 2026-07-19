@@ -196,7 +196,7 @@ export default function ResumeBuilderPage() {
                 style={{
                   width: '100%', minHeight: 460, font: "400 12.5px 'SF Mono', Monaco, monospace",
                   color: 'var(--text)', background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 14, padding: '18px 20px', outline: 'none', resize: 'vertical',
+                  borderRadius: 14, padding: '18px 20px', resize: 'vertical',
                   lineHeight: 1.6, boxSizing: 'border-box',
                 }}
               />
@@ -268,17 +268,18 @@ export default function ResumeBuilderPage() {
               style={{
                 flex: 1, font: "400 13px 'Inter'", color: 'var(--text)',
                 background: 'var(--surface-2)', border: '1px solid var(--border)',
-                borderRadius: 980, padding: '9px 14px', outline: 'none',
+                borderRadius: 980, padding: '9px 14px',
               }}
             />
             <button
               onClick={handleSend}
               disabled={!chatInput.trim() || chat.isPending}
+              aria-label="Send message"
               style={{
                 width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
                 background: 'var(--accent-brand)', border: 'none', color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: chatInput.trim() ? 'pointer' : 'default', opacity: chatInput.trim() ? 1 : 0.5,
+                cursor: chatInput.trim() ? 'pointer' : 'default', opacity: chatInput.trim() ? 1 : 0.6,
               }}
             >
               <Send size={14} />
