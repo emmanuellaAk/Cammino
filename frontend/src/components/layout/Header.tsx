@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Search, Sun, Moon, Plus } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
@@ -28,6 +28,13 @@ export default function Header() {
     ? ['Resume builder', 'Edit your resume live, or ask the AI to do it for you']
     : PAGE_META[path] ?? ['Cammino', '']
 
+  // Keep the browser/tab title and the visible page heading in sync with the
+  // route — screen readers announce document.title on SPA navigation, and
+  // without this every route change was silently invisible to that announcement.
+  useEffect(() => {
+    document.title = title === 'Cammino' ? 'Cammino' : `${title} · Cammino`
+  }, [title])
+
   return (
     <header
       className="flex-none flex items-center gap-4"
@@ -39,7 +46,7 @@ export default function Header() {
       }}
     >
       <div className="flex-1 min-w-0">
-        <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</div>
+        <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h1>
         <div style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {sub}
         </div>

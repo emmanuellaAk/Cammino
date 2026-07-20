@@ -23,6 +23,19 @@ const refreshClient = axios.create({
 let isRefreshing = false
 let queue: Array<{ resolve: () => void; reject: (err: unknown) => void }> = []
 
+async function refreshSession() {
+  // The refresh cookie is shared across every tab on this origin, but `isRefreshing`
+  // above is only shared within one tab. If two tabs both hit a 401 around the same
+  // time, they'd otherwise fire concurrent refresh calls — if the backend rotates the
+  // refresh token on use, the second call can land on an already-rotated token and
+  // fail, logging that tab out despite having a perfectly valid session. The Web Locks
+  // API serializes the actual refresh call across tabs so only one is ever in flight.
+  if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+    return navigator.locks.request('careeros-token-refresh', () => refreshClient.post('/api/auth/refresh'))
+  }
+  return refreshClient.post('/api/auth/refresh')
+}
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
@@ -36,7 +49,7 @@ api.interceptors.response.use(
       original._retry = true
       isRefreshing = true
       try {
-        await refreshClient.post('/api/auth/refresh')
+        await refreshSession()
         queue.forEach((p) => p.resolve())
         queue = []
         return api(original)

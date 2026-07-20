@@ -24,7 +24,7 @@
   --panel:     #f0f0f3;
   --text:      #1d1d1f;
   --text-2:    rgba(0,0,0,0.56);
-  --text-3:    rgba(0,0,0,0.40);
+  --text-3:    rgba(0,0,0,0.58); /* was 0.40 — ~2.85:1 on white, failed WCAG AA's 4.5:1 for normal text; this clears ~5.3:1 */
   --border:    rgba(0,0,0,0.09);
   --border-2:  rgba(0,0,0,0.05);
   --sidebar:   #fbfbfd;
@@ -52,7 +52,7 @@
   --panel:     #161618;
   --text:      #f5f5f7;
   --text-2:    rgba(255,255,255,0.62);
-  --text-3:    rgba(255,255,255,0.42);
+  --text-3:    rgba(255,255,255,0.60); /* was 0.42 — failed WCAG AA against surface/panel backgrounds */
   --border:    rgba(255,255,255,0.10);
   --border-2:  rgba(255,255,255,0.06);
   --sidebar:   #161617;

@@ -65,10 +65,18 @@ function UploadZone({ onFile, disabled }: { onFile: (f: File) => void; disabled?
 
   return (
     <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-label="Upload resume, PDF, max 5 MB"
+      aria-disabled={disabled}
       onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragging(true) }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       onClick={() => { if (!disabled) inputRef.current?.click() }}
+      onKeyDown={(e) => {
+        if (disabled) return
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() }
+      }}
       style={{
         border: `2px dashed ${dragging ? 'var(--accent-brand)' : 'var(--border)'}`,
         borderRadius: 12, padding: '28px 20px', textAlign: 'center',

@@ -4,7 +4,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react'
  * pattern of silently swallowing fetch errors and falling back to mock data. */
 export default function ErrorBanner({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   return (
-    <div style={{
+    <div role="alert" style={{
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '12px 14px', borderRadius: 11,
       background: 'color-mix(in srgb, #e5484d 8%, transparent)',

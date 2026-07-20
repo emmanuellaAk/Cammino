@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ExternalLink, Trash2, Plus, Zap, ChevronDown } from 'lucide-react'
@@ -85,11 +85,28 @@ function Card({ title, children, action }: { title: string; children: React.Reac
 function StatusSelector({ value, onChange }: { value: ApplicationStatus; onChange: (s: ApplicationStatus) => void }) {
   const [open, setOpen] = useState(false)
   const meta = STATUS_META[value]
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
         style={{
           display: 'flex', alignItems: 'center', gap: 7,
           padding: '7px 12px', borderRadius: 980, cursor: 'pointer',
@@ -103,7 +120,7 @@ function StatusSelector({ value, onChange }: { value: ApplicationStatus; onChang
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div style={{
+        <div role="menu" style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50,
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 10, padding: '4px 0',
@@ -112,7 +129,7 @@ function StatusSelector({ value, onChange }: { value: ApplicationStatus; onChang
           {STATUSES.map((s) => {
             const m = STATUS_META[s]
             return (
-              <button key={s} onClick={() => { onChange(s); setOpen(false) }} style={{
+              <button key={s} role="menuitem" onClick={() => { onChange(s); setOpen(false) }} style={{
                 display: 'flex', alignItems: 'center', gap: 9,
                 width: '100%', padding: '8px 12px',
                 background: s === value ? 'var(--border-2)' : 'none',
@@ -139,6 +156,7 @@ export default function JobDetailPage() {
   const queryClient = useQueryClient()
   const [noteInput, setNoteInput] = useState('')
   const [localStatus, setLocalStatus] = useState<ApplicationStatus | null>(null)
+  const latestStatusRequest = useRef<ApplicationStatus | null>(null)
 
   const { data: jobRes, isLoading, isError: jobError } = useQuery({
     queryKey: ['job', id],
@@ -192,8 +210,16 @@ export default function JobDetailPage() {
 
   function handleStatusChange(s: ApplicationStatus) {
     const prevStatus = status
+    latestStatusRequest.current = s
     setLocalStatus(s)
-    updateStatus.mutate(s, { onError: () => setLocalStatus(prevStatus) })
+    updateStatus.mutate(s, {
+      // Only revert if this is still the most recently requested change — an
+      // older in-flight request failing after a newer one already landed
+      // must not clobber the newer status back to a stale value.
+      onError: () => {
+        if (latestStatusRequest.current === s) setLocalStatus(prevStatus)
+      },
+    })
   }
 
   function handleAddNote() {

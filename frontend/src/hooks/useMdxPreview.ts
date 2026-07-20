@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { evaluate } from '@mdx-js/mdx'
 import * as runtime from 'react/jsx-runtime'
+import { stripUnsafeMdx } from '@/lib/mdxSanitize'
 
 /** Compiles MDX source to a renderable component at runtime, debounced.
  * Keeps the last successfully-compiled component on screen while a newer
@@ -19,7 +20,10 @@ export function useMdxPreview(source: string, debounceMs = 400) {
       const src = latestSource.current
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { default: Compiled } = await evaluate(src, runtime as any)
+        const { default: Compiled } = await evaluate(src, {
+          ...(runtime as any),
+          remarkPlugins: [stripUnsafeMdx],
+        })
         setContent(() => Compiled as ComponentType<{ components?: Record<string, unknown> }>)
         setError(null)
       } catch (e) {

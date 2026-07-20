@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ShieldCheck, ShieldAlert, Trash2, X, Puzzle, Copy, Check } from 'lucide-react'
+import { CheckCircle2, ShieldCheck, ShieldAlert, Trash2, Puzzle, Copy, Check } from 'lucide-react'
 import { userApi, type UpdateProfileRequest } from '@/api/user'
 import { extensionApi } from '@/api/extension'
 import { useAuth } from '@/context/AuthContext'
 import { formatDate, timeAgo, initials } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import Modal from '@/components/ui/Modal'
 import type { CareerLevel } from '@/types'
 
 const CAREER_LEVELS: { value: CareerLevel; label: string }[] = [
@@ -60,29 +61,7 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
   const canDelete = confirmText.trim().toLowerCase() === userEmail.toLowerCase()
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        style={{
-          background: 'var(--surface)', borderRadius: 16,
-          border: '1px solid var(--border)', padding: '26px 26px 22px',
-          width: 420, boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: '#e5484d' }}>Delete account</span>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-
+    <Modal title="Delete account" titleColor="#e5484d" onClose={onClose} width={420}>
         <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 16 }}>
           This permanently deletes your account, resumes, tracked applications, and email scan history.
           This cannot be undone. Type <strong>{userEmail}</strong> to confirm.
@@ -93,7 +72,6 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={userEmail}
-          autoFocus
         />
 
         <div style={{ display: 'flex', gap: 9, justifyContent: 'flex-end', marginTop: 18 }}>
@@ -117,8 +95,7 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
             {loading ? 'Deleting…' : 'Delete permanently'}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 

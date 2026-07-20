@@ -95,32 +95,45 @@ export default function ResumeBuilderPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
 
+  // Component instance is reused across drafts (only :id changes), so unsaved
+  // edits/in-progress chat text for the previous draft must not bleed into the
+  // next one when the user navigates before saving.
+  useEffect(() => {
+    setRawContent(null)
+    setChatInput('')
+  }, [id])
+
   const saveRaw = useMutation({
-    mutationFn: (mdxContent: string) => resumeDraftsApi.update(id!, { mdxContent }),
-    onSuccess: (res) => {
-      queryClient.setQueryData(['resume-draft', id], (old: typeof draftRes) =>
+    mutationFn: ({ id: draftId, mdxContent }: { id: string; mdxContent: string }) =>
+      resumeDraftsApi.update(draftId, { mdxContent }),
+    onSuccess: (res, variables) => {
+      queryClient.setQueryData(['resume-draft', variables.id], (old: typeof draftRes) =>
         old ? { ...old, data: { ...old.data, data: res.data.data } } : old)
-      setRawContent(null)
+      // Only clear the "unsaved changes" state if we're still looking at the
+      // draft that was actually saved — a slow save resolving after the user
+      // navigated to a different draft must not clear that draft's editor state.
+      if (variables.id === id) setRawContent(null)
     },
   })
 
   const chat = useMutation({
-    mutationFn: (message: string) => resumeDraftsApi.chat(id!, message),
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['resume-draft', id, 'messages'] })
+    mutationFn: ({ id: draftId, message }: { id: string; message: string }) =>
+      resumeDraftsApi.chat(draftId, message),
+    onSuccess: (res, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['resume-draft', variables.id, 'messages'] })
       if (res.data.data) {
-        queryClient.setQueryData(['resume-draft', id], (old: typeof draftRes) =>
+        queryClient.setQueryData(['resume-draft', variables.id], (old: typeof draftRes) =>
           old ? { ...old, data: { ...old.data, data: res.data.data!.draft } } : old)
       }
-      setChatInput('')
+      if (variables.id === id) setChatInput('')
     },
   })
 
   function handleSend() {
     const msg = chatInput.trim()
-    if (!msg || chat.isPending) return
+    if (!msg || chat.isPending || !id) return
     setChatInput('')
-    chat.mutate(msg)
+    chat.mutate({ id, message: msg })
   }
 
   const chatErrorMessage = (chat.error as { response?: { data?: { message?: string } } } | null)
@@ -202,7 +215,7 @@ export default function ResumeBuilderPage() {
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                 <button
-                  onClick={() => saveRaw.mutate(displayedContent)}
+                  onClick={() => id && saveRaw.mutate({ id, mdxContent: displayedContent })}
                   disabled={rawContent === null || saveRaw.isPending}
                   style={{
                     padding: '8px 16px', borderRadius: 980, fontSize: 12.5, fontWeight: 600,

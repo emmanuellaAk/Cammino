@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, MoreHorizontal, Calendar, X } from 'lucide-react'
+import { Plus, MoreHorizontal, Calendar } from 'lucide-react'
 import { jobsApi, type CreateJobRequest } from '@/api/jobs'
 import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import Modal from '@/components/ui/Modal'
 import type { ApplicationStatus, Job } from '@/types'
 
 const COLUMNS: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
@@ -44,13 +45,19 @@ function StatusMenu({ job, onMove, onClose }: {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', onKeyDown)
+    }
   }, [onClose])
 
   return (
     <div
       ref={ref}
+      role="menu"
       style={{
         position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
         background: 'var(--surface)', border: '1px solid var(--border)',
@@ -66,6 +73,7 @@ function StatusMenu({ job, onMove, onClose }: {
         return (
           <button
             key={s}
+            role="menuitem"
             onClick={(e) => { e.stopPropagation(); onMove(job.id, s); onClose() }}
             style={{
               display: 'flex', alignItems: 'center', gap: 9,
@@ -177,30 +185,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   }
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        style={{
-          background: 'var(--surface)', borderRadius: 16,
-          border: '1px solid var(--border)', padding: '26px 26px 22px',
-          width: 440, boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>Add job</span>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-
+    <Modal title="Add job" onClose={onClose} width={440}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
             <Field label="Job title *">
@@ -260,8 +245,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -305,16 +289,16 @@ function BoardColumn({ status, jobs, onAdd, onMove }: {
           <JobCard key={job.id} job={job} onMove={onMove} />
         ))}
         {jobs.length === 0 && (
-          <div
+          <button
             onClick={() => onAdd(status)}
             style={{
               border: '1.5px dashed var(--border)', borderRadius: 12,
-              padding: '20px 14px', textAlign: 'center',
-              color: 'var(--text-3)', fontSize: 12, cursor: 'pointer',
+              padding: '20px 14px', textAlign: 'center', width: '100%',
+              background: 'none', color: 'var(--text-3)', fontSize: 12, cursor: 'pointer',
             }}
           >
             + Add job
-          </div>
+          </button>
         )}
       </div>
     </div>
