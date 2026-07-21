@@ -36,11 +36,21 @@ async function refreshSession() {
   return refreshClient.post('/api/auth/refresh')
 }
 
+// Endpoints whose own 401 IS the actual answer (wrong password, unverified
+// account, no session to refresh) — never worth a silent refresh-and-retry.
+// Without this, a failed login/register 401 was treated the same as an
+// expired-session 401 on some other call: the interceptor tried to refresh
+// a session that never existed, that refresh failed, and the user got
+// bounced to a hard page reload instead of ever seeing the real error
+// ("please verify your email", "invalid credentials", etc).
+const AUTH_ENDPOINTS_NO_REFRESH = ['/api/auth/login', '/api/auth/register']
+
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    const isAuthEndpoint = AUTH_ENDPOINTS_NO_REFRESH.some((p) => original?.url?.includes(p))
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           queue.push({ resolve: () => resolve(api(original)), reject })

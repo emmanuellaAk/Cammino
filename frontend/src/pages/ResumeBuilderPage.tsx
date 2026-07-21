@@ -6,6 +6,7 @@ import { resumeDraftsApi } from '@/api/resumeDrafts'
 import { useMdxPreview } from '@/hooks/useMdxPreview'
 import { resumeMdxComponents } from '@/lib/resumeMdxComponents'
 import { timeAgo } from '@/lib/utils'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 import type { ResumeDraftMessage } from '@/types'
 
 function Skel({ h = 16, r = 6 }: { h?: number; r?: number }) {
@@ -26,8 +27,8 @@ function DocumentPane({ mdxContent, mode }: { mdxContent: string; mode: 'preview
       {error && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 500,
-          color: '#c98a00', background: 'color-mix(in srgb, #c98a00 10%, transparent)',
-          border: '1px solid color-mix(in srgb, #c98a00 25%, transparent)',
+          color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--warning) 25%, transparent)',
           borderRadius: 9, padding: '9px 12px', marginBottom: 16,
         }}>
           <AlertTriangle size={13} style={{ flexShrink: 0 }} />
@@ -70,6 +71,7 @@ export default function ResumeBuilderPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const isTablet = useIsTablet()
   const [mode, setMode] = useState<'preview' | 'raw'>('preview')
   const [rawContent, setRawContent] = useState<string | null>(null)
   const [chatInput, setChatInput] = useState('')
@@ -168,12 +170,12 @@ export default function ResumeBuilderPage() {
         <ArrowLeft size={14} /> Resume
       </button>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 14, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 360px', gap: 14, alignItems: 'start' }}>
 
         {/* ── Left: document ────────────────────────────────────────────── */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>{draft.title}</div>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em' }}>{draft.title}</h2>
             <div style={{ display: 'flex', gap: 4, background: 'var(--surface-2)', borderRadius: 980, padding: 3 }}>
               <button
                 onClick={() => setMode('preview')}
@@ -242,7 +244,7 @@ export default function ResumeBuilderPage() {
         }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 7 }}>
             <Sparkles size={14} style={{ color: 'var(--accent-brand)' }} />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>Edit with AI</span>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>Edit with AI</h2>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -254,7 +256,7 @@ export default function ResumeBuilderPage() {
             )}
             {messages.map((m) => <MessageBubble key={m.id} message={m} />)}
             {chat.isPending && (
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }} role="status" aria-live="polite">
                 <div style={{
                   padding: '9px 13px', borderRadius: 13, background: 'var(--surface-2)',
                   border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--text-3)',
@@ -264,7 +266,7 @@ export default function ResumeBuilderPage() {
               </div>
             )}
             {chat.isError && (
-              <div style={{ fontSize: 12, color: '#e5484d', textAlign: 'center', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: 'var(--error)', textAlign: 'center', lineHeight: 1.5 }}>
                 {chatErrorMessage ?? "Couldn't reach the AI service — try again."}
               </div>
             )}

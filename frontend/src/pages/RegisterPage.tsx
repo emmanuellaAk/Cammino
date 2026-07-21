@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { Target, Check } from 'lucide-react'
 import { authApi } from '@/api/auth'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 
 const inputStyle: React.CSSProperties = {
   width: '100%', font: "400 14px 'Inter'", color: 'var(--text)',
@@ -22,12 +23,13 @@ function passwordStrength(pw: string) {
 }
 
 export default function RegisterPage() {
+  const isMobile = useIsMobile()
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
   const { checks, score } = passwordStrength(form.password)
-  const strengthColor = score <= 1 ? '#e5484d' : score === 2 ? '#c98a00' : score === 3 ? '#0071e3' : '#12936a'
+  const strengthColor = score <= 1 ? 'var(--error)' : score === 2 ? 'var(--warning)' : score === 3 ? '#0071e3' : 'var(--success)'
   const strengthLabel = score <= 1 ? 'Weak' : score === 2 ? 'Fair' : score === 3 ? 'Good' : 'Strong'
 
   const register = useMutation({
@@ -68,10 +70,10 @@ export default function RegisterPage() {
         }}>
           <div style={{
             width: 48, height: 48, borderRadius: '50%',
-            background: 'color-mix(in srgb, #12936a 14%, transparent)',
+            background: 'color-mix(in srgb, var(--success) 14%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
           }}>
-            <Check size={22} style={{ color: '#12936a' }} />
+            <Check size={22} style={{ color: 'var(--success)' }} />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, letterSpacing: '-0.02em' }}>Check your inbox</div>
           <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6, margin: '0 0 24px' }}>
@@ -122,10 +124,11 @@ export default function RegisterPage() {
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>First name</label>
+                <label htmlFor="register-firstName" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>First name</label>
                 <input
+                  id="register-firstName"
                   required autoFocus value={form.firstName} onChange={set('firstName')}
                   placeholder="Amara" style={inputStyle}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
@@ -133,8 +136,9 @@ export default function RegisterPage() {
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Last name</label>
+                <label htmlFor="register-lastName" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Last name</label>
                 <input
+                  id="register-lastName"
                   required value={form.lastName} onChange={set('lastName')}
                   placeholder="Okafor" style={inputStyle}
                   onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
@@ -144,8 +148,9 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Email</label>
+              <label htmlFor="register-email" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Email</label>
               <input
+                id="register-email"
                 type="email" required value={form.email} onChange={set('email')}
                 placeholder="you@example.com" style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
@@ -154,8 +159,9 @@ export default function RegisterPage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Password</label>
+              <label htmlFor="register-password" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Password</label>
               <input
+                id="register-password"
                 type="password" required value={form.password} onChange={set('password')}
                 placeholder="Min. 8 characters" style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
@@ -181,7 +187,7 @@ export default function RegisterPage() {
                       { ok: checks.number, label: 'Number' },
                       { ok: checks.special, label: 'Special char' },
                     ].map(({ ok, label }) => (
-                      <span key={label} style={{ fontSize: 11, color: ok ? '#12936a' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span key={label} style={{ fontSize: 11, color: ok ? 'var(--success)' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 3 }}>
                         <span style={{ fontWeight: 700 }}>{ok ? '✓' : '○'}</span> {label}
                       </span>
                     ))}
@@ -193,9 +199,9 @@ export default function RegisterPage() {
 
             {error && (
               <div style={{
-                fontSize: 12, color: '#e5484d', padding: '9px 12px',
-                background: 'color-mix(in srgb, #e5484d 10%, transparent)',
-                border: '1px solid color-mix(in srgb, #e5484d 25%, transparent)',
+                fontSize: 12, color: 'var(--error)', padding: '9px 12px',
+                background: 'color-mix(in srgb, var(--error) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
                 borderRadius: 8,
               }}>
                 {error}

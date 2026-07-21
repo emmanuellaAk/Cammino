@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Briefcase } from 'lucide-react'
 import { analyticsApi } from '@/api/analytics'
 import { STATUS_META } from '@/lib/utils'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function Skel({ w = '100%', h = 16, r = 6 }: { w?: string | number; h?: number; r?: number }) {
@@ -30,7 +31,7 @@ function Card({ title, action, children }: { title: string; action?: React.React
       boxShadow: 'var(--shadow)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</span>
+        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</h2>
         {action}
       </div>
       {children}
@@ -78,7 +79,7 @@ function BarChart({ data, max }: { data: { period: string; count: number }[]; ma
         const label = d.period.length > 6 ? d.period.slice(-5) : d.period
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', minHeight: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', minHeight: 14 }}>
               {d.count > 0 ? d.count : ''}
             </span>
             <div style={{ width: '100%', height: BAR_H, display: 'flex', alignItems: 'flex-end' }}>
@@ -88,7 +89,7 @@ function BarChart({ data, max }: { data: { period: string; count: number }[]; ma
                 transition: 'height 0.45s var(--ease)',
               }} />
             </div>
-            <span style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{label}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{label}</span>
           </div>
         )
       })}
@@ -104,8 +105,8 @@ function FunnelBar({ label, count, pct, max, color }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)' }}>{label}</span>
-        <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
           {count}{pct != null ? ` · ${pct}%` : ''}
         </span>
       </div>
@@ -122,6 +123,7 @@ function FunnelBar({ label, count, pct, max, color }: {
 // ── Analytics page ────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly')
+  const isTablet = useIsTablet()
 
   const { data: overviewRes, isLoading: loadingOverview } = useQuery({
     queryKey: ['analytics', 'overview'],
@@ -160,7 +162,7 @@ export default function AnalyticsPage() {
     <div style={{ maxWidth: 1080, margin: '0 auto' }} className="animate-fade-up">
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 14, marginBottom: 14 }}>
         <StatCard loading={loadingOverview} label="Total applications" value={ov?.total ?? 0} sub={`${ov?.applied ?? 0} applied`} />
         <StatCard loading={loadingOverview} label="Response rate" value={ov ? `${ov.responseRate}%` : '—'} sub={`${ov?.inInterview ?? 0} reached interview`} />
         <StatCard loading={loadingOverview} label="Offer rate" value={ov ? `${ov.offerRate}%` : '—'} sub={`${ov?.offers ?? 0} offer(s)`} />
@@ -173,7 +175,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* ── Funnel + Trend ────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
 
         {/* Funnel */}
         <Card title="Conversion funnel">
@@ -244,7 +246,8 @@ export default function AnalyticsPage() {
         ) : sources.length === 0 ? (
           <Empty text="No sourced applications yet — add a source when you save a job." />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ overflowX: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 480 }}>
             {/* Header */}
             <div style={{
               display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr 1fr', gap: 10,
@@ -262,7 +265,7 @@ export default function AnalyticsPage() {
             {sources.map((s) => (
               <div key={s.source} style={{
                 display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr 1fr', gap: 10,
-                padding: '10px 10px', borderRadius: 9, alignItems: 'center',
+                padding: '10px 10px', borderRadius: 12, alignItems: 'center',
               }}>
                 <span style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7 }}>
                   <Briefcase size={13} style={{ color: 'var(--text-3)' }} /> {s.source}
@@ -272,12 +275,13 @@ export default function AnalyticsPage() {
                 <span style={{ fontSize: 13, color: 'var(--text-2)', textAlign: 'right' }}>{s.offers}</span>
                 <span style={{
                   fontSize: 13, fontWeight: 600, textAlign: 'right',
-                  color: s.interviewRate >= 25 ? '#12936a' : 'var(--text-2)',
+                  color: s.interviewRate >= 25 ? 'var(--success)' : 'var(--text-2)',
                 }}>
                   {s.interviewRate}%
                 </span>
               </div>
             ))}
+          </div>
           </div>
         )}
       </Card>

@@ -30,6 +30,9 @@
   --sidebar:   #fbfbfd;
   --track:     rgba(0,0,0,0.08);
   --accent-brand: #12936a;
+  --success:   #12936a;
+  --warning:   #c98a00;
+  --error:     #e5484d;
   --shadow:    0 1px 2px rgba(0,0,0,.05), 0 10px 26px rgba(0,0,0,.05);
   --ease:      cubic-bezier(0.4,0,0.2,1);
   --radius:    0.625rem;

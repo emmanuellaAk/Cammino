@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -18,7 +19,11 @@ const NAV = [
   { to: '/profile',        label: 'Profile',         Icon: User },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ isTablet = false, open = false, onClose }: {
+  isTablet?: boolean
+  open?: boolean
+  onClose?: () => void
+}) {
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const accent = 'var(--accent-brand)'
@@ -35,16 +40,38 @@ export default function Sidebar() {
   const userName = user ? `${user.firstName} ${user.lastName}` : 'Amara Okafor'
   const userLevel = user?.careerLevel ?? 'Final-year student'
 
+  // Below the tablet breakpoint the sidebar becomes an off-canvas drawer —
+  // fixed position, slid off-screen when closed — instead of a permanent
+  // 236px column that would otherwise eat most of a phone-width viewport.
+  useEffect(() => {
+    if (!isTablet || !open) return
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose?.() }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [isTablet, open, onClose])
+
   return (
-    <aside
-      className="flex flex-col flex-none"
-      style={{
-        width: 236,
-        background: 'var(--sidebar)',
-        borderRight: '1px solid var(--border)',
-        padding: '18px 14px',
-      }}
-    >
+    <>
+      {isTablet && open && (
+        <div
+          onClick={onClose}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 199 }}
+        />
+      )}
+      <aside
+        className="flex flex-col flex-none"
+        style={{
+          width: 236,
+          background: 'var(--sidebar)',
+          borderRight: '1px solid var(--border)',
+          padding: '18px 14px',
+          ...(isTablet ? {
+            position: 'fixed', top: 0, bottom: 0, left: open ? 0 : -260,
+            zIndex: 200, transition: 'left 0.2s var(--ease)',
+            boxShadow: open ? '0 0 32px rgba(0,0,0,0.25)' : 'none',
+          } : {}),
+        }}
+      >
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px 18px' }}>
         <div
@@ -77,6 +104,7 @@ export default function Sidebar() {
             key={to}
             to={to}
             end={to === '/dashboard'}
+            onClick={() => { if (isTablet) onClose?.() }}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-[11px] px-3 py-[10px] rounded-[10px] cursor-pointer transition-colors duration-150 no-underline',
@@ -98,7 +126,7 @@ export default function Sidebar() {
             <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{label}</span>
             {badge != null && (
               <span style={{
-                background: '#e5484d', color: '#fff',
+                background: 'var(--error)', color: '#fff',
                 fontSize: 11, fontWeight: 600,
                 minWidth: 18, height: 18, borderRadius: 9,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px',
@@ -137,6 +165,7 @@ export default function Sidebar() {
           <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }

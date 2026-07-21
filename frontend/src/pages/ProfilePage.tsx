@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, cloneElement, isValidElement, type ReactElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, ShieldCheck, ShieldAlert, Trash2, Puzzle, Copy, Check } from 'lucide-react'
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 import { formatDate, timeAgo, initials } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Modal from '@/components/ui/Modal'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import type { CareerLevel } from '@/types'
 
 const CAREER_LEVELS: { value: CareerLevel; label: string }[] = [
@@ -24,11 +25,12 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactElement }) {
+  const id = useId()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>{label}</label>
-      {children}
+      <label htmlFor={id} style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>{label}</label>
+      {isValidElement(children) ? cloneElement(children, { id } as object) : children}
     </div>
   )
 }
@@ -41,9 +43,9 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
       boxShadow: 'var(--shadow)',
     }}>
       {title && (
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, letterSpacing: '-0.01em' }}>
+        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 16, letterSpacing: '-0.01em' }}>
           {title}
-        </div>
+        </h2>
       )}
       {children}
     </div>
@@ -61,13 +63,14 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
   const canDelete = confirmText.trim().toLowerCase() === userEmail.toLowerCase()
 
   return (
-    <Modal title="Delete account" titleColor="#e5484d" onClose={onClose} width={420}>
+    <Modal title="Delete account" titleColor="var(--error)" onClose={onClose} width={420}>
         <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 16 }}>
           This permanently deletes your account, resumes, tracked applications, and email scan history.
           This cannot be undone. Type <strong>{userEmail}</strong> to confirm.
         </p>
 
         <input
+          aria-label={`Type ${userEmail} to confirm account deletion`}
           style={inputStyle}
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
@@ -87,7 +90,7 @@ function DeleteAccountModal({ userEmail, onClose, onConfirm, loading }: {
             onClick={onConfirm}
             style={{
               padding: '9px 18px', borderRadius: 980, fontSize: 13, fontWeight: 600,
-              background: '#e5484d', border: 'none', color: '#fff',
+              background: 'var(--error)', border: 'none', color: '#fff',
               cursor: canDelete && !loading ? 'pointer' : 'default',
               opacity: canDelete && !loading ? 1 : 0.5,
             }}
@@ -112,7 +115,7 @@ function NewTokenReveal({ token, label, onDone }: { token: string; label: string
 
   return (
     <div style={{
-      borderRadius: 11, border: '1px solid color-mix(in srgb, var(--accent-brand) 30%, var(--border))',
+      borderRadius: 14, border: '1px solid color-mix(in srgb, var(--accent-brand) 30%, var(--border))',
       background: 'color-mix(in srgb, var(--accent-brand) 6%, transparent)', padding: '14px 16px', marginBottom: 12,
     }}>
       <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8 }}>
@@ -126,24 +129,26 @@ function NewTokenReveal({ token, label, onDone }: { token: string; label: string
         }}>
           {token}
         </code>
-        <button
-          onClick={copy}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
-            padding: '0 12px', borderRadius: 8, border: '1px solid var(--border)',
-            background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
-        </button>
+        <span role="status" aria-live="polite" style={{ display: 'contents' }}>
+          <button
+            onClick={copy}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600,
+              padding: '0 12px', borderRadius: 8, border: '1px solid var(--border)',
+              background: 'var(--surface-2)', color: 'var(--text-2)', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy'}
+          </button>
+        </span>
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8, lineHeight: 1.5 }}>
         Paste this into the Cammino extension popup. It won't be shown again — generate a new one if you lose it.
       </div>
       <button
         onClick={onDone}
         style={{
-          fontSize: 11.5, fontWeight: 600, color: 'var(--accent-brand)',
+          fontSize: 11, fontWeight: 600, color: 'var(--accent-brand)',
           background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 10,
         }}
       >
@@ -243,6 +248,7 @@ function ExtensionCard() {
         <form onSubmit={handleGenerate} style={{ display: 'flex', gap: 8 }}>
           <input
             autoFocus
+            aria-label="Token label"
             style={{ ...inputStyle, flex: 1 }}
             value={labelInput}
             onChange={(e) => setLabelInput(e.target.value)}
@@ -292,6 +298,7 @@ export default function ProfilePage() {
   const { user, setUser, logout } = useAuth()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const [form, setForm] = useState<UpdateProfileRequest>({
     firstName: user?.firstName ?? '',
@@ -369,8 +376,8 @@ export default function ProfilePage() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600,
               padding: '4px 10px', borderRadius: 980, flexShrink: 0,
-              color: user.emailVerified ? '#12936a' : '#c98a00',
-              background: user.emailVerified ? 'color-mix(in srgb, #12936a 12%, transparent)' : 'color-mix(in srgb, #c98a00 12%, transparent)',
+              color: user.emailVerified ? 'var(--success)' : 'var(--warning)',
+              background: user.emailVerified ? 'color-mix(in srgb, var(--success) 12%, transparent)' : 'color-mix(in srgb, var(--warning) 12%, transparent)',
             }}>
               {user.emailVerified ? <ShieldCheck size={12} /> : <ShieldAlert size={12} />}
               {user.emailVerified ? 'Verified' : 'Unverified'}
@@ -384,7 +391,7 @@ export default function ProfilePage() {
         {/* Edit form */}
         <Card title="Personal details">
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }}>
               <Field label="First name">
                 <input style={inputStyle} value={form.firstName ?? ''} onChange={set('firstName')} />
               </Field>
@@ -393,7 +400,7 @@ export default function ProfilePage() {
               </Field>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }}>
               <Field label="Phone">
                 <input style={inputStyle} value={form.phone ?? ''} onChange={set('phone')} placeholder="+233 20 000 0000" />
               </Field>
@@ -421,7 +428,7 @@ export default function ProfilePage() {
               />
             </Field>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }} role="status" aria-live="polite">
               <button
                 type="submit"
                 disabled={save.isPending}
@@ -434,12 +441,12 @@ export default function ProfilePage() {
                 {save.isPending ? 'Saving…' : 'Save changes'}
               </button>
               {showSaved && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: '#12936a' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, color: 'var(--success)' }}>
                   <CheckCircle2 size={13} /> Saved
                 </span>
               )}
               {save.isError && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#e5484d' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--error)' }}>
                   Couldn't save — try again
                 </span>
               )}
@@ -464,9 +471,9 @@ export default function ProfilePage() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
                 fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 9,
-                background: 'color-mix(in srgb, #e5484d 8%, transparent)',
-                border: '1px solid color-mix(in srgb, #e5484d 25%, transparent)',
-                color: '#e5484d', cursor: 'pointer',
+                background: 'color-mix(in srgb, var(--error) 8%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
+                color: 'var(--error)', cursor: 'pointer',
               }}
             >
               <Trash2 size={13} /> Delete

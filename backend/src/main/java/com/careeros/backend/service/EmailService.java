@@ -14,20 +14,26 @@ public class EmailService {
     private final JavaMailSender mailSender;
     private final String fromAddress;
     private final String baseUrl;
+    private final String frontendUrl;
 
     // ObjectProvider resolves to null if JavaMailSender is not configured — no bean creation failure
     public EmailService(
             ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${spring.mail.from:noreply@careeros.com}") String fromAddress,
-            @Value("${app.base-url:http://localhost:8080}") String baseUrl
+            @Value("${app.base-url:http://localhost:8080}") String baseUrl,
+            @Value("${app.frontend-url:http://localhost:3000}") String frontendUrl
     ) {
         this.mailSender = mailSenderProvider.getIfAvailable();
         this.fromAddress = fromAddress;
         this.baseUrl = baseUrl;
+        this.frontendUrl = frontendUrl;
     }
 
     public void sendVerificationEmail(String to, String token) {
-        String link = baseUrl + "/api/auth/verify-email?token=" + token;
+        // Points at the frontend SPA, which calls the JSON verify-email API itself and
+        // renders a real confirmation page — a direct link to the backend endpoint
+        // used to dump raw JSON in the user's browser.
+        String link = frontendUrl + "/verify-email?token=" + token;
         String body = """
                 Welcome to CareerOS!
 
@@ -40,6 +46,18 @@ public class EmailService {
                 """.formatted(link);
 
         send(to, "Verify your CareerOS email", body);
+    }
+
+    public void sendDuplicateRegistrationNotice(String to) {
+        String body = """
+                Someone just tried to create a new CareerOS account using this email address,
+                which already has an account.
+
+                If this was you, you can sign in as normal, or reset your password if you've
+                forgotten it. If it wasn't you, no action is needed — your account is unaffected.
+                """;
+
+        send(to, "Someone tried to sign up with your CareerOS email", body);
     }
 
     public void sendPasswordResetEmail(String to, String token) {

@@ -6,6 +6,7 @@ import { jobsApi } from '@/api/jobs'
 import { resumeApi } from '@/api/resume'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 import type { ApplicationStatus } from '@/types'
 
 const STATUSES: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
@@ -20,7 +21,7 @@ function ScoreCircle({ score }: { score: number }) {
   const r = 42
   const circ = 2 * Math.PI * r
   const fill = (score / 100) * circ
-  const color = score >= 80 ? '#12936a' : score >= 65 ? '#c98a00' : '#8a8a8e'
+  const color = score >= 80 ? 'var(--success)' : score >= 65 ? 'var(--warning)' : '#8a8a8e'
   const label = score >= 80 ? 'Strong match' : score >= 65 ? 'Good match' : 'Moderate match'
 
   return (
@@ -56,8 +57,8 @@ function Chip({ label, type }: { label: string; type: 'match' | 'miss' }) {
   return (
     <span style={{
       fontSize: 12, fontWeight: 500, padding: '4px 10px', borderRadius: 980,
-      background: type === 'match' ? 'color-mix(in srgb, #12936a 12%, transparent)' : 'color-mix(in srgb, #c98a00 12%, transparent)',
-      color: type === 'match' ? '#12936a' : '#c98a00',
+      background: type === 'match' ? 'color-mix(in srgb, var(--success) 12%, transparent)' : 'color-mix(in srgb, var(--warning) 12%, transparent)',
+      color: type === 'match' ? 'var(--success)' : 'var(--warning)',
     }}>
       {label}
     </span>
@@ -73,7 +74,7 @@ function Card({ title, children, action }: { title: string; children: React.Reac
       boxShadow: 'var(--shadow)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</span>
+        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</h2>
         {action}
       </div>
       {children}
@@ -124,7 +125,7 @@ function StatusSelector({ value, onChange }: { value: ApplicationStatus; onChang
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 50,
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 10, padding: '4px 0',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: 148,
+          boxShadow: 'var(--shadow)', minWidth: 148,
         }}>
           {STATUSES.map((s) => {
             const m = STATUS_META[s]
@@ -151,6 +152,7 @@ function StatusSelector({ value, onChange }: { value: ApplicationStatus; onChang
 
 // ── Job Detail Page ───────────────────────────────────────────────────────────
 export default function JobDetailPage() {
+  const isTablet = useIsTablet()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -236,7 +238,7 @@ export default function JobDetailPage() {
     return (
       <div style={{ maxWidth: 960, margin: '0 auto' }}>
         <div className="animate-pulse" style={{ height: 130, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)', marginBottom: 16 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 360px', gap: 14 }}>
           <div className="animate-pulse" style={{ height: 320, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
           <div className="animate-pulse" style={{ height: 320, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--border)' }} />
         </div>
@@ -307,8 +309,8 @@ export default function JobDetailPage() {
             {daysUntilDeadline !== null && (
               <span style={{
                 fontSize: 12, fontWeight: 600, borderRadius: 980, padding: '5px 11px',
-                background: daysUntilDeadline <= 3 ? 'color-mix(in srgb, #e5484d 12%, transparent)' : 'color-mix(in srgb, #c98a00 12%, transparent)',
-                color: daysUntilDeadline <= 3 ? '#e5484d' : '#c98a00',
+                background: daysUntilDeadline <= 3 ? 'color-mix(in srgb, var(--error) 12%, transparent)' : 'color-mix(in srgb, var(--warning) 12%, transparent)',
+                color: daysUntilDeadline <= 3 ? 'var(--error)' : 'var(--warning)',
               }}>
                 Deadline: {daysUntilDeadline <= 0 ? 'today' : daysUntilDeadline === 1 ? 'tomorrow' : `in ${daysUntilDeadline}d`} · {formatDate(job.deadline!)}
               </span>
@@ -335,7 +337,7 @@ export default function JobDetailPage() {
       </div>
 
       {/* ── Body ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 14, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 340px', gap: 14, alignItems: 'start' }}>
 
         {/* Left: AI match ─────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -375,9 +377,9 @@ export default function JobDetailPage() {
 
                 {/* Matching skills */}
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                     Matching skills
-                  </div>
+                  </h3>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {matchData.matchingSkills.map((s) => <Chip key={s} label={s} type="match" />)}
                   </div>
@@ -386,9 +388,9 @@ export default function JobDetailPage() {
                 {/* Missing skills */}
                 {matchData.missingSkills.length > 0 && (
                   <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
                       Gaps to address
-                    </div>
+                    </h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {matchData.missingSkills.map((s) => <Chip key={s} label={s} type="miss" />)}
                     </div>
@@ -398,9 +400,9 @@ export default function JobDetailPage() {
                 {/* Recommendations */}
                 {matchData.recommendations.length > 0 && (
                   <div style={{ marginTop: 20, padding: '14px 16px', borderRadius: 10, background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+                    <h3 style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
                       Recommendations
-                    </div>
+                    </h3>
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {matchData.recommendations.map((r, i) => (
                         <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>

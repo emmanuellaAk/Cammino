@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, Sun, Moon, Plus } from 'lucide-react'
+import { Search, Sun, Moon, Plus, Menu } from 'lucide-react'
 import { useTheme } from '@/context/ThemeContext'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 
 const PAGE_META: Record<string, [string, string]> = {
   '/dashboard':  ['Overview',        'Welcome back. Here is your job search at a glance.'],
@@ -13,11 +14,12 @@ const PAGE_META: Record<string, [string, string]> = {
   '/profile':    ['Profile',         'Your details, preferences, and connected services.'],
 }
 
-export default function Header() {
+export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { theme, toggleTheme } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const isMobile = useIsMobile()
 
   const path = '/' + location.pathname.split('/')[1]
   const isJobDetail = location.pathname.startsWith('/tracker/') && location.pathname !== '/tracker'
@@ -41,33 +43,53 @@ export default function Header() {
       style={{
         height: 62,
         borderBottom: '1px solid var(--border)',
-        padding: '0 24px',
+        padding: isMobile ? '0 14px' : '0 24px',
         background: 'var(--bg)',
       }}
     >
+      {onMenuClick && (
+        <button
+          onClick={onMenuClick}
+          aria-label="Toggle navigation menu"
+          style={{
+            width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+            border: '1px solid var(--border)', background: 'var(--surface)',
+            color: 'var(--text-2)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer',
+          }}
+        >
+          <Menu size={18} />
+        </button>
+      )}
+
       <div className="flex-1 min-w-0">
         <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h1>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {sub}
-        </div>
+        {!isMobile && (
+          <div style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {sub}
+          </div>
+        )}
       </div>
 
       {/* Search */}
-      <div className="relative flex items-center">
-        <Search size={16} className="absolute left-3 pointer-events-none" style={{ color: 'var(--text-3)' }} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search jobs, companies…"
-          style={{
-            width: 236, font: "400 13px 'Inter'", color: 'var(--text)',
-            background: 'var(--surface-2)', border: '1px solid var(--border)',
-            borderRadius: 980, padding: '9px 14px 9px 36px',
-          }}
-          onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
-          onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-        />
-      </div>
+      {!isMobile && (
+        <div className="relative flex items-center">
+          <Search size={16} className="absolute left-3 pointer-events-none" style={{ color: 'var(--text-3)' }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search jobs, companies"
+            placeholder="Search jobs, companies…"
+            style={{
+              width: 236, font: "400 13px 'Inter'", color: 'var(--text)',
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 980, padding: '9px 14px 9px 36px',
+            }}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--accent-brand)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+          />
+        </div>
+      )}
 
       {/* Theme toggle */}
       <button
@@ -87,16 +109,17 @@ export default function Header() {
       {/* Add job */}
       <button
         onClick={() => navigate('/tracker')}
+        aria-label="Add job"
         className="flex items-center gap-[6px] whitespace-nowrap"
         style={{
           background: 'var(--accent-brand)', color: '#fff',
-          border: 'none', borderRadius: 980,
-          padding: '9px 16px', font: "600 13px 'Inter'",
+          border: 'none', borderRadius: 980, flexShrink: 0,
+          padding: isMobile ? '9px' : '9px 16px', font: "600 13px 'Inter'",
           cursor: 'pointer',
         }}
       >
         <Plus size={16} />
-        Add job
+        {!isMobile && 'Add job'}
       </button>
     </header>
   )

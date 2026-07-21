@@ -6,6 +6,7 @@ import { resumeApi } from '@/api/resume'
 import { resumeDraftsApi } from '@/api/resumeDrafts'
 import { timeAgo } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 import type { Resume } from '@/types'
 
 function apiErrorMessage(error: unknown, fallback: string): string {
@@ -79,7 +80,7 @@ function UploadZone({ onFile, disabled }: { onFile: (f: File) => void; disabled?
       }}
       style={{
         border: `2px dashed ${dragging ? 'var(--accent-brand)' : 'var(--border)'}`,
-        borderRadius: 12, padding: '28px 20px', textAlign: 'center',
+        borderRadius: 14, padding: '28px 20px', textAlign: 'center',
         cursor: disabled ? 'default' : 'pointer', transition: 'border-color 0.15s, background 0.15s',
         background: dragging ? 'color-mix(in srgb, var(--accent-brand) 5%, transparent)' : 'var(--surface-2)',
         opacity: disabled ? 0.6 : 1,
@@ -153,6 +154,7 @@ function ResumeRow({ resume, onActivate, onDelete }: {
 export default function ResumePage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const isTablet = useIsTablet()
   const { data: draftsRes, isError: draftsError } = useQuery({
     queryKey: ['resume-drafts'],
     queryFn: () => resumeDraftsApi.list(),
@@ -213,7 +215,7 @@ export default function ResumePage() {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }} className="animate-fade-up">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 300px', gap: 14, alignItems: 'start' }}>
 
         {/* ── Left: Analysis ─────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -224,7 +226,7 @@ export default function ResumePage() {
               {/* Score + summary */}
               <div style={{
                 background: 'var(--surface)', borderRadius: 14,
-                border: '1px solid var(--border)', padding: '24px 24px 20px',
+                border: '1px solid var(--border)', padding: '20px 22px',
                 boxShadow: 'var(--shadow)',
               }}>
                 <AnalysisHeader experienceYears={analysis.experienceYears} education={analysis.education} />
@@ -235,7 +237,7 @@ export default function ResumePage() {
 
               {/* Skills */}
               <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Detected skills</div>
+                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Detected skills</h2>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {analysis.skills.map((s) => (
                     <span key={s} style={{
@@ -251,11 +253,11 @@ export default function ResumePage() {
 
               {/* Strengths */}
               <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Strengths</div>
+                <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 14, letterSpacing: '-0.01em' }}>Strengths</h2>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {analysis.strengths.map((s, i) => (
                     <li key={i} style={{ display: 'flex', gap: 9, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>
-                      <span style={{ color: '#12936a', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
+                      <span style={{ color: 'var(--success)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>✓</span>
                       {s}
                     </li>
                   ))}
@@ -284,10 +286,10 @@ export default function ResumePage() {
 
           {/* Resume list */}
           {resumes.length > 0 && (
-            <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px 18px 14px', boxShadow: 'var(--shadow)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>
                 Your resumes
-              </div>
+              </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {resumes.map((r) => (
                   <ResumeRow key={r.id} resume={r} onActivate={(id) => activate.mutate(id)} onDelete={(id) => remove.mutate(id)} />
@@ -302,9 +304,9 @@ export default function ResumePage() {
           )}
 
           {/* Upload */}
-          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
             {resumes.length === 0 && !loadingResumes && (
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>Upload resume</div>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>Upload resume</h2>
             )}
             <UploadZone onFile={(f) => upload.mutate(f)} disabled={upload.isPending} />
             {upload.isPending && (
@@ -320,21 +322,23 @@ export default function ResumePage() {
           {/* Analyse button */}
           {activeId && (
             <div>
-              <button
-                onClick={() => analyze.mutate()}
-                disabled={analyze.isPending}
-                style={{
-                  width: '100%', padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 600,
-                  background: 'var(--accent-brand)', color: '#fff', border: 'none',
-                  cursor: analyze.isPending ? 'default' : 'pointer', opacity: analyze.isPending ? 0.6 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                }}
-              >
-                {analyze.isPending
-                  ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analysing…</>
-                  : <><Zap size={14} /> Analyse resume</>
-                }
-              </button>
+              <span role="status" aria-live="polite" style={{ display: 'contents' }}>
+                <button
+                  onClick={() => analyze.mutate()}
+                  disabled={analyze.isPending}
+                  style={{
+                    width: '100%', padding: '11px', borderRadius: 11, fontSize: 13, fontWeight: 600,
+                    background: 'var(--accent-brand)', color: '#fff', border: 'none',
+                    cursor: analyze.isPending ? 'default' : 'pointer', opacity: analyze.isPending ? 0.6 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  }}
+                >
+                  {analyze.isPending
+                    ? <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analysing…</>
+                    : <><Zap size={14} /> Analyse resume</>
+                  }
+                </button>
+              </span>
               {analyzeErrorMessage && (
                 <div style={{ marginTop: 10 }}>
                   <ErrorBanner message={analyzeErrorMessage} />
@@ -344,10 +348,10 @@ export default function ResumePage() {
           )}
 
           {/* Resume builder */}
-          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px 18px 14px', boxShadow: 'var(--shadow)' }}>
+          <div style={{ background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)', padding: '20px 22px', boxShadow: 'var(--shadow)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
               <Sparkles size={14} style={{ color: 'var(--accent-brand)' }} />
-              <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>Resume builder</span>
+              <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>Resume builder</h2>
             </div>
 
             {draftsError && (

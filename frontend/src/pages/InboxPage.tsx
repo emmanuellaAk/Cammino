@@ -16,8 +16,8 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 }
 
 const CONFIDENCE_META: Record<ScanConfidence, { label: string; color: string }> = {
-  HIGH:   { label: 'High confidence',   color: '#12936a' },
-  MEDIUM: { label: 'Medium confidence', color: '#c98a00' },
+  HIGH:   { label: 'High confidence',   color: 'var(--success)' },
+  MEDIUM: { label: 'Medium confidence', color: 'var(--warning)' },
   LOW:    { label: 'Low confidence',    color: '#8a8a8e' },
 }
 
@@ -67,7 +67,7 @@ function ScanResultRow({ result, job }: {
             {statusMeta.label}
           </span>
           {result.statusApplied && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: '#12936a' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: 'var(--success)' }}>
               <CheckCircle2 size={11} /> Auto-applied
             </span>
           )}
@@ -176,10 +176,10 @@ export default function InboxPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <div style={{
                 width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                background: 'color-mix(in srgb, #12936a 12%, transparent)',
+                background: 'color-mix(in srgb, var(--success) 12%, transparent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <ShieldCheck size={19} style={{ color: '#12936a' }} />
+                <ShieldCheck size={19} style={{ color: 'var(--success)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{connection.gmailAddress}</div>
@@ -187,19 +187,21 @@ export default function InboxPage() {
                   {connection.lastSyncAt ? `Last scanned ${timeAgo(connection.lastSyncAt)}` : 'Not scanned yet'}
                 </div>
               </div>
-              <button
-                onClick={() => scan.mutate()}
-                disabled={scan.isPending}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
-                  padding: '8px 14px', borderRadius: 9, border: 'none',
-                  background: 'var(--accent-brand)', color: '#fff',
-                  cursor: scan.isPending ? 'default' : 'pointer', opacity: scan.isPending ? 0.6 : 1,
-                }}
-              >
-                <RefreshCw size={13} style={scan.isPending ? { animation: 'spin 0.8s linear infinite' } : undefined} />
-                {scan.isPending ? 'Scanning…' : 'Scan now'}
-              </button>
+              <span role="status" aria-live="polite" style={{ display: 'contents' }}>
+                <button
+                  onClick={() => scan.mutate()}
+                  disabled={scan.isPending}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
+                    padding: '8px 14px', borderRadius: 9, border: 'none',
+                    background: 'var(--accent-brand)', color: '#fff',
+                    cursor: scan.isPending ? 'default' : 'pointer', opacity: scan.isPending ? 0.6 : 1,
+                  }}
+                >
+                  <RefreshCw size={13} style={scan.isPending ? { animation: 'spin 0.8s linear infinite' } : undefined} />
+                  {scan.isPending ? 'Scanning…' : 'Scan now'}
+                </button>
+              </span>
               <button
                 onClick={() => disconnect.mutate()}
                 disabled={disconnect.isPending}
@@ -257,11 +259,11 @@ export default function InboxPage() {
         {connection?.connected && (
           <div style={{
             background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--border)',
-            padding: '18px 18px 16px', boxShadow: 'var(--shadow)',
+            padding: '20px 22px', boxShadow: 'var(--shadow)',
           }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>
+            <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 12, letterSpacing: '-0.01em' }}>
               Detected updates
-            </div>
+            </h2>
 
             {historyLoading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

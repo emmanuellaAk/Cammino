@@ -7,13 +7,14 @@ import {
 import { notificationsApi, type UpdateNotificationPreferenceRequest } from '@/api/notifications'
 import { timeAgo } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 import type { Notification, NotificationType } from '@/types'
 
 const TYPE_META: Record<NotificationType, { label: string; color: string; Icon: typeof Bell }> = {
-  DEADLINE_REMINDER:  { label: 'Deadline',    color: '#c98a00', Icon: Calendar },
+  DEADLINE_REMINDER:  { label: 'Deadline',    color: 'var(--warning)', Icon: Calendar },
   FOLLOW_UP_REMINDER: { label: 'Follow-up',   color: '#0071e3', Icon: Clock },
   STATUS_CHANGE:      { label: 'Status',      color: '#7c5cff', Icon: RefreshCw },
-  AI_ANALYSIS_READY:  { label: 'AI analysis', color: '#12936a', Icon: Zap },
+  AI_ANALYSIS_READY:  { label: 'AI analysis', color: 'var(--success)', Icon: Zap },
   SYSTEM:             { label: 'System',      color: '#8a8a8e', Icon: Info },
 }
 
@@ -25,11 +26,11 @@ function Card({ title, children, action }: { title: string; children: React.Reac
   return (
     <div style={{
       background: 'var(--surface)', borderRadius: 14,
-      border: '1px solid var(--border)', padding: '18px 18px 16px',
+      border: '1px solid var(--border)', padding: '20px 22px',
       boxShadow: 'var(--shadow)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</span>
+        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em' }}>{title}</h2>
         {action}
       </div>
       {children}
@@ -133,6 +134,7 @@ function PrefRow({ label, sub, checked, onChange }: {
 export default function NotificationsPage() {
   const queryClient = useQueryClient()
   const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+  const isTablet = useIsTablet()
 
   const { data: listRes, isLoading } = useQuery({
     queryKey: ['notifications', showUnreadOnly],
@@ -180,7 +182,7 @@ export default function NotificationsPage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }} className="animate-fade-up">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 300px', gap: 14, alignItems: 'start' }}>
 
         {/* Left: notification list */}
         <Card

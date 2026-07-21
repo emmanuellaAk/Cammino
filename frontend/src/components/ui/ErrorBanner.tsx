@@ -7,10 +7,10 @@ export default function ErrorBanner({ message, onRetry }: { message?: string; on
     <div role="alert" style={{
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '12px 14px', borderRadius: 11,
-      background: 'color-mix(in srgb, #e5484d 8%, transparent)',
-      border: '1px solid color-mix(in srgb, #e5484d 25%, transparent)',
+      background: 'color-mix(in srgb, var(--error) 8%, transparent)',
+      border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
     }}>
-      <AlertTriangle size={15} style={{ color: '#e5484d', flexShrink: 0 }} />
+      <AlertTriangle size={15} style={{ color: 'var(--error)', flexShrink: 0 }} />
       <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text)', lineHeight: 1.5 }}>
         {message ?? "Couldn't load this — please try again."}
       </span>

@@ -72,8 +72,9 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Email</label>
+              <label htmlFor="login-email" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Email</label>
               <input
+                id="login-email"
                 type="email" required autoFocus
                 value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -85,12 +86,13 @@ export default function LoginPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Password</label>
+                <label htmlFor="login-password" style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>Password</label>
                 <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--accent-brand)', textDecoration: 'none' }}>
                   Forgot password?
                 </Link>
               </div>
               <input
+                id="login-password"
                 type="password" required
                 value={password} onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -102,9 +104,9 @@ export default function LoginPage() {
 
             {error && (
               <div style={{
-                fontSize: 12, color: '#e5484d', padding: '9px 12px',
-                background: 'color-mix(in srgb, #e5484d 10%, transparent)',
-                border: '1px solid color-mix(in srgb, #e5484d 25%, transparent)',
+                fontSize: 12, color: 'var(--error)', padding: '9px 12px',
+                background: 'color-mix(in srgb, var(--error) 10%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--error) 25%, transparent)',
                 borderRadius: 8,
               }}>
                 {error}

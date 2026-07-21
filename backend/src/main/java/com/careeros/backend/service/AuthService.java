@@ -49,14 +49,30 @@ public class AuthService {
 
     @Transactional
     public ApiResponse<UserResponse> register(RegisterRequest request, HttpServletResponse response) {
-        if (userRepository.existsByEmail(request.getEmail().toLowerCase())) {
-            throw new ConflictException("An account with this email already exists");
-        }
-
+        // Password strength is validated before the email-existence check (and both
+        // branches below return an identically-shaped response) so that neither a
+        // weak-password rejection nor a "success" message lets a caller distinguish
+        // "this email is already registered" from "this email is available" —
+        // that distinction used to leak via a 409 CONFLICT only reachable for
+        // already-registered emails.
         validatePasswordStrength(request.getPassword());
 
+        // Note: this early-return response is only indistinguishable from a genuine
+        // registration when requireEmailVerification is true (the production default,
+        // see below) — that path never auto-logs in, so both branches return the same
+        // message with no data/cookies. With verification disabled (local dev only), a
+        // genuine registration auto-logs in with a UserResponse + Set-Cookie headers,
+        // which this branch correctly cannot replicate for somebody else's account —
+        // that's an acceptable, dev-only gap, not a production-facing leak.
+        String email = request.getEmail().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            emailService.sendDuplicateRegistrationNotice(email);
+            log.info("Registration attempted for an existing email — notice sent, no account created");
+            return ApiResponse.success("Account created. Please check your email to verify your account.", null);
+        }
+
         User user = User.builder()
-                .email(request.getEmail().toLowerCase())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName().trim())
                 .lastName(request.getLastName().trim())
@@ -123,6 +139,9 @@ public class AuthService {
 
     @Transactional
     public ApiResponse<Void> refresh(String rawRefreshToken, HttpServletResponse response) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new UnauthorizedException("No refresh token present — please log in");
+        }
         String hash = TokenHashUtil.sha256(rawRefreshToken);
 
         RefreshToken stored = refreshTokenRepository.findByTokenHash(hash)

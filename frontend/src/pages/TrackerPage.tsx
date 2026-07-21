@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId, cloneElement, isValidElement, type ReactElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, MoreHorizontal, Calendar } from 'lucide-react'
@@ -6,6 +6,7 @@ import { jobsApi, type CreateJobRequest } from '@/api/jobs'
 import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Modal from '@/components/ui/Modal'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import type { ApplicationStatus, Job } from '@/types'
 
 const COLUMNS: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
@@ -24,11 +25,12 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactElement }) {
+  const id = useId()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>{label}</label>
-      {children}
+      <label htmlFor={id} style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>{label}</label>
+      {isValidElement(children) ? cloneElement(children, { id } as object) : children}
     </div>
   )
 }
@@ -62,7 +64,7 @@ function StatusMenu({ job, onMove, onClose }: {
         position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 10, padding: '4px 0',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: 148,
+        boxShadow: 'var(--shadow)', minWidth: 148,
       }}
     >
       <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', padding: '6px 12px 4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -153,7 +155,7 @@ function JobCard({ job, onMove }: { job: Job; onMove: (id: string, status: Appli
           <span style={{
             display: 'flex', alignItems: 'center', gap: 4,
             fontSize: 11, fontWeight: 600,
-            color: daysUntilDeadline <= 3 ? '#e5484d' : daysUntilDeadline <= 7 ? '#c98a00' : 'var(--text-3)',
+            color: daysUntilDeadline <= 3 ? 'var(--error)' : daysUntilDeadline <= 7 ? 'var(--warning)' : 'var(--text-3)',
           }}>
             <Calendar size={11} />
             {daysUntilDeadline <= 0 ? 'Today' : `${daysUntilDeadline}d`}
@@ -174,6 +176,8 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   error?: string
 }) {
   const [form, setForm] = useState<CreateJobRequest>({ jobTitle: '', company: '', status: defaultStatus })
+  const isMobile = useIsMobile()
+  const fieldGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }
 
   const set = (key: keyof CreateJobRequest) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value || undefined, ...(key === 'jobTitle' || key === 'company' ? { [key]: e.target.value } : {}) }))
@@ -187,7 +191,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   return (
     <Modal title="Add job" onClose={onClose} width={440}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+          <div style={fieldGrid}>
             <Field label="Job title *">
               <input required style={inputStyle} value={form.jobTitle} onChange={set('jobTitle')} placeholder="Software Engineer" />
             </Field>
@@ -196,7 +200,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
             </Field>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+          <div style={fieldGrid}>
             <Field label="Status">
               <select style={inputStyle} value={form.status} onChange={set('status')}>
                 {COLUMNS.map((s) => (
@@ -213,7 +217,7 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
             <input style={inputStyle} type="url" value={form.jobUrl ?? ''} onChange={set('jobUrl')} placeholder="https://..." />
           </Field>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+          <div style={fieldGrid}>
             <Field label="Deadline">
               <input style={inputStyle} type="date" value={form.deadline ?? ''} onChange={set('deadline')} />
             </Field>

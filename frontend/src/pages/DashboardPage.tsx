@@ -4,6 +4,7 @@ import { analyticsApi } from '@/api/analytics'
 import { jobsApi } from '@/api/jobs'
 import { STATUS_META, formatDate, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
+import { useIsTablet } from '@/hooks/useMediaQuery'
 import type { ApplicationStatus } from '@/types'
 
 const PIPELINE_STATUSES: ApplicationStatus[] = [
@@ -28,9 +29,9 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       border: '1px solid var(--border)', padding: '20px 22px',
       boxShadow: 'var(--shadow)',
     }}>
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, letterSpacing: '-0.01em' }}>
+      <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, marginBottom: 16, letterSpacing: '-0.01em' }}>
         {title}
-      </div>
+      </h2>
       {children}
     </div>
   )
@@ -82,7 +83,7 @@ function BarChart({ data, max }: { data: { period: string; count: number }[]; ma
         const label = d.period.length > 6 ? d.period.slice(-5) : d.period
         return (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-3)', minHeight: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', minHeight: 14 }}>
               {d.count > 0 ? d.count : ''}
             </span>
             <div style={{ width: '100%', height: BAR_H, display: 'flex', alignItems: 'flex-end' }}>
@@ -92,7 +93,7 @@ function BarChart({ data, max }: { data: { period: string; count: number }[]; ma
                 transition: 'height 0.45s var(--ease)',
               }} />
             </div>
-            <span style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{label}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{label}</span>
           </div>
         )
       })}
@@ -112,6 +113,7 @@ function Empty({ text }: { text: string }) {
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const isTablet = useIsTablet()
 
   const { data: overviewRes, isLoading: loadingOverview, isError: overviewError, refetch: refetchOverview } = useQuery({
     queryKey: ['analytics', 'overview'],
@@ -164,7 +166,7 @@ export default function DashboardPage() {
       )}
 
       {/* ── Stat cards ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
         <StatCard
           loading={loadingOverview}
           label="Total applications"
@@ -193,7 +195,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Pipeline + Weekly trend ────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
 
         {/* Pipeline breakdown */}
         <Card title="Pipeline">
@@ -254,7 +256,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Recent applications + Deadlines ───────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : '1fr 1fr', gap: 14 }}>
 
         {/* Recent applications */}
         <Card title="Recent activity">
@@ -330,7 +332,7 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {deadlines.map((job) => {
                 const daysLeft = Math.ceil((new Date(job.deadline!).getTime() - Date.now()) / 86_400_000)
-                const urgentColor = daysLeft <= 3 ? '#e5484d' : daysLeft <= 7 ? '#c98a00' : 'var(--text-2)'
+                const urgentColor = daysLeft <= 3 ? 'var(--error)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--text-2)'
                 return (
                   <div
                     key={job.id}

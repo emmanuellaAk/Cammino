@@ -61,7 +61,9 @@ export default function Modal({ title, titleColor, onClose, width = 440, childre
         style={{
           background: 'var(--surface)', borderRadius: 16,
           border: '1px solid var(--border)', padding: '26px 26px 22px',
-          width, boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
+          width: `min(${width}px, calc(100vw - 32px))`,
+          maxHeight: 'calc(100vh - 32px)', overflowY: 'auto',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
