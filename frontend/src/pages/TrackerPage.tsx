@@ -1,13 +1,19 @@
 import { useState, useRef, useEffect, useCallback, useId, cloneElement, isValidElement, type ReactElement } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, MoreHorizontal, Calendar } from 'lucide-react'
+import { Plus, MoreHorizontal, Calendar, Wand2, Check, RefreshCw } from 'lucide-react'
 import { jobsApi, type CreateJobRequest } from '@/api/jobs'
 import { STATUS_META, timeAgo, companyColor, companyInitial } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import Modal from '@/components/ui/Modal'
+import DatePicker from '@/components/ui/DatePicker'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import type { ApplicationStatus, Job } from '@/types'
+
+function apiErrorMessage(error: unknown, fallback: string): string {
+  const message = (error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message
+  return message ?? fallback
+}
 
 const COLUMNS: ApplicationStatus[] = ['SAVED', 'APPLIED', 'ASSESSMENT', 'INTERVIEW', 'OFFER', 'REJECTED']
 
@@ -31,6 +37,35 @@ function Field({ label, children }: { label: string; children: ReactElement }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
       <label htmlFor={id} style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-2)' }}>{label}</label>
       {isValidElement(children) ? cloneElement(children, { id } as object) : children}
+    </div>
+  )
+}
+
+// Field clones an `id` prop onto its direct child for label association — this
+// forwards that id down to the actual <input>, since the direct child here is a
+// positioning wrapper (for the status icon overlay), not the input itself.
+function UrlInputWithStatus({ id, value, onChange, onBlur, placeholder, status }: {
+  id?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onBlur: () => void
+  placeholder: string
+  status: React.ReactNode
+}) {
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        id={id}
+        style={{ width: '100%', font: "400 13px 'Inter'", color: 'var(--text)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 9, padding: '9px 34px 9px 12px', boxSizing: 'border-box' }}
+        type="url"
+        value={value}
+        onChange={onChange}
+        onBlur={onBlur}
+        placeholder={placeholder}
+      />
+      <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
+        {status}
+      </div>
     </div>
   )
 }
@@ -176,11 +211,41 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   error?: string
 }) {
   const [form, setForm] = useState<CreateJobRequest>({ jobTitle: '', company: '', status: defaultStatus })
+  const [autofilled, setAutofilled] = useState(false)
   const isMobile = useIsMobile()
   const fieldGrid: React.CSSProperties = { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 13 }
 
   const set = (key: keyof CreateJobRequest) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value || undefined, ...(key === 'jobTitle' || key === 'company' ? { [key]: e.target.value } : {}) }))
+
+  const extract = useMutation({
+    mutationFn: (url: string) => jobsApi.extractFromUrl(url),
+    onSuccess: (res) => {
+      const data = res.data.data
+      if (!data) return
+      setForm((f) => ({
+        ...f,
+        jobTitle: data.jobTitle || f.jobTitle,
+        company: data.company || f.company,
+        location: data.location || f.location,
+      }))
+      setAutofilled(true)
+    },
+  })
+
+  function looksLikeUrl(s: string) {
+    try { const u = new URL(s); return u.protocol === 'http:' || u.protocol === 'https:' } catch { return false }
+  }
+
+  function handleUrlBlur() {
+    const url = form.jobUrl?.trim()
+    if (url && looksLikeUrl(url) && !extract.isPending) {
+      setAutofilled(false)
+      extract.mutate(url)
+    }
+  }
+
+  const extractErrorMessage = apiErrorMessage(extract.error, "Couldn't fetch details from that link — enter them manually.")
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -191,6 +256,35 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
   return (
     <Modal title="Add job" onClose={onClose} width={440}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+          {/* Job URL first — paste a link and the fields below fill themselves in */}
+          <Field label="Job URL">
+            <UrlInputWithStatus
+              value={form.jobUrl ?? ''}
+              onChange={(e) => { set('jobUrl')(e); setAutofilled(false) }}
+              onBlur={handleUrlBlur}
+              placeholder="Paste a LinkedIn, Indeed… link to autofill"
+              status={
+                extract.isPending ? (
+                  <RefreshCw size={14} style={{ color: 'var(--text-3)', animation: 'spin 0.8s linear infinite' }} />
+                ) : autofilled ? (
+                  <Check size={14} style={{ color: 'var(--success)' }} />
+                ) : (
+                  <Wand2 size={14} style={{ color: 'var(--text-3)' }} />
+                )
+              }
+            />
+            {autofilled && !extract.isPending && (
+              <span style={{ fontSize: 11.5, color: 'var(--success)', marginTop: 4, display: 'block' }}>
+                Auto-filled from the link below — feel free to edit.
+              </span>
+            )}
+            {extract.isError && (
+              <span style={{ fontSize: 11.5, color: 'var(--error)', marginTop: 4, display: 'block' }}>
+                {extractErrorMessage}
+              </span>
+            )}
+          </Field>
+
           <div style={fieldGrid}>
             <Field label="Job title *">
               <input required style={inputStyle} value={form.jobTitle} onChange={set('jobTitle')} placeholder="Software Engineer" />
@@ -213,13 +307,9 @@ function AddJobModal({ defaultStatus, onClose, onSubmit, loading, error }: {
             </Field>
           </div>
 
-          <Field label="Job URL">
-            <input style={inputStyle} type="url" value={form.jobUrl ?? ''} onChange={set('jobUrl')} placeholder="https://..." />
-          </Field>
-
           <div style={fieldGrid}>
             <Field label="Deadline">
-              <input style={inputStyle} type="date" value={form.deadline ?? ''} onChange={set('deadline')} />
+              <DatePicker value={form.deadline ?? ''} onChange={(v) => setForm((f) => ({ ...f, deadline: v || undefined }))} />
             </Field>
             <Field label="Salary">
               <input style={inputStyle} value={form.salary ?? ''} onChange={set('salary')} placeholder="£60k – £80k" />

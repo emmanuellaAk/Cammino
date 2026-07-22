@@ -14,6 +14,12 @@ export interface CreateJobRequest {
   source?: string
 }
 
+export interface JobExtraction {
+  jobTitle: string
+  company: string
+  location: string
+}
+
 export interface ListJobsParams {
   status?: ApplicationStatus
   company?: string
@@ -33,6 +39,9 @@ export const jobsApi = {
 
   create: (data: CreateJobRequest) =>
     api.post<ApiResponse<Job>>('/api/jobs', data),
+
+  extractFromUrl: (url: string) =>
+    api.post<ApiResponse<JobExtraction>>('/api/jobs/extract-from-url', { url }),
 
   update: (id: string, data: Partial<CreateJobRequest>) =>
     api.put<ApiResponse<Job>>(`/api/jobs/${id}`, data),

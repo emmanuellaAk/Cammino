@@ -21,6 +21,7 @@
 		<bucket4j.version>8.10.1</bucket4j.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<resilience4j.version>2.3.0</resilience4j.version>
+		<jsoup.version>1.17.2</jsoup.version>
 	</properties>
 
 	<dependencies>
@@ -117,6 +118,11 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>${jsoup.version}</version>
 		</dependency>
 
 		<!-- ─── Test ─── -->

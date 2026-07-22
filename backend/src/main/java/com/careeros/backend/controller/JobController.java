@@ -3,6 +3,7 @@ package com.careeros.backend.controller;
 import com.careeros.backend.dto.request.*;
 import com.careeros.backend.dto.response.*;
 import com.careeros.backend.entity.ApplicationStatus;
+import com.careeros.backend.service.JobExtractionService;
 import com.careeros.backend.service.JobService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -32,11 +33,18 @@ public class JobController {
             Set.of("createdAt", "updatedAt", "company", "jobTitle", "deadline", "appliedAt", "status");
 
     private final JobService jobService;
+    private final JobExtractionService jobExtractionService;
 
     @PostMapping
     @Operation(summary = "Save a job application")
     ResponseEntity<ApiResponse<JobResponse>> create(@Valid @RequestBody CreateJobRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(jobService.createJob(request));
+    }
+
+    @PostMapping("/extract-from-url")
+    @Operation(summary = "Fetch a job-posting URL and extract title/company/location to prefill the Add Job form")
+    ResponseEntity<ApiResponse<JobExtractionResponse>> extractFromUrl(@Valid @RequestBody ExtractJobInfoRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(jobExtractionService.extract(request.getUrl())));
     }
 
     @GetMapping

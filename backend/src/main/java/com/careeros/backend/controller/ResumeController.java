@@ -47,16 +47,18 @@ public class ResumeController {
     }
 
     @GetMapping("/{id}/download")
-    @Operation(summary = "Download the resume file")
-    ResponseEntity<Resource> download(@PathVariable UUID id) {
+    @Operation(summary = "View/download the resume file")
+    ResponseEntity<Resource> download(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "inline") String disposition
+    ) {
         FileDownload dl = resumeService.download(id);
+        ContentDisposition cd = "attachment".equals(disposition)
+                ? ContentDisposition.attachment().filename(dl.filename()).build()
+                : ContentDisposition.inline().filename(dl.filename()).build();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(dl.mimeType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment()
-                                .filename(dl.filename())
-                                .build()
-                                .toString())
+                .header(HttpHeaders.CONTENT_DISPOSITION, cd.toString())
                 .body(dl.resource());
     }
 

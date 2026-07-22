@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, Briefcase, Sparkles, Plus } from 'lucide-react'
+import { Upload, FileText, Trash2, CheckCircle, Zap, RefreshCw, GraduationCap, Briefcase, Sparkles, Plus, ExternalLink } from 'lucide-react'
 import { resumeApi } from '@/api/resume'
 import { resumeDraftsApi } from '@/api/resumeDrafts'
 import { timeAgo } from '@/lib/utils'
 import ErrorBanner from '@/components/ui/ErrorBanner'
 import { useIsTablet } from '@/hooks/useMediaQuery'
+import { BASE_URL } from '@/lib/axios'
 import type { Resume } from '@/types'
 
 function apiErrorMessage(error: unknown, fallback: string): string {
@@ -139,6 +140,15 @@ function ResumeRow({ resume, onActivate, onDelete }: {
           Set active
         </button>
       )}
+      <a
+        href={`${BASE_URL}/api/resumes/${resume.id}/download`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`View ${resume.originalFileName}`}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', padding: 3, flexShrink: 0, display: 'flex' }}
+      >
+        <ExternalLink size={14} />
+      </a>
       <button
         onClick={() => onDelete(resume.id)}
         aria-label={`Delete ${resume.originalFileName}`}
@@ -180,7 +190,7 @@ export default function ResumePage() {
   const resumes = resumesRes?.data?.data ?? []
   const activeId = resumes.find((r) => r.active)?.id
 
-  const { data: analysisRes, isError: analysisError } = useQuery({
+  const { data: analysisRes, error: analysisErrorObj } = useQuery({
     queryKey: ['resume-analysis', activeId],
     queryFn: () => resumeApi.getAnalysis(),
     enabled: !!activeId,
@@ -189,6 +199,10 @@ export default function ResumePage() {
   })
 
   const analysis = analysisRes?.data?.data ?? null
+  // A 404 means "no analysis has been run yet" — that's the empty state below, not
+  // a failure. isError alone can't tell the two apart, so check the status directly.
+  const analysisStatus = (analysisErrorObj as { response?: { status?: number } } | null)?.response?.status
+  const analysisError = !!analysisErrorObj && analysisStatus !== 404
 
   const upload = useMutation({
     mutationFn: (file: File) => resumeApi.upload(file),

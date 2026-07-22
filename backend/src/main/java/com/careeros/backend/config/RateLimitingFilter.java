@@ -60,7 +60,10 @@ public class RateLimitingFilter implements Filter {
     }
 
     private boolean isRateLimited(String uri) {
-        return uri.startsWith("/api/auth/");
+        // Also covers extract-from-url: it makes a server-side outbound HTTP request
+        // to a URL the caller supplies, so it's worth the same per-IP throttling as
+        // auth endpoints even though it requires a logged-in session.
+        return uri.startsWith("/api/auth/") || uri.equals("/api/jobs/extract-from-url");
     }
 
     private String clientKey(HttpServletRequest request) {
